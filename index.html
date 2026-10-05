@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ru" data-repo="t0roky0/MCLauncher">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MC Launcher — играй вместе</title>
+  <meta name="description" content="Бесплатный лаунчер Minecraft: Java и Bedrock в одном окне, пати до 5 человек с голосовым чатом, друзья из Xbox, скины, которые видно в игре, и Discord.">
+  <meta property="og:title" content="MC Launcher — играй вместе">
+  <meta property="og:description" content="Java и Bedrock, пати с голосом, друзья из Xbox, скины в игре. Бесплатно.">
+  <meta property="og:image" content="assets/img/poster.jpg">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#141312">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="assets/img/icon-64.png">
+  <link rel="apple-touch-icon" href="assets/img/icon-180.png">
+  <link rel="preload" href="assets/fonts/minecraft.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <!-- the language before the first paint, so the page doesn't flash Russian -->
+  <script src="i18n.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="#top" data-t-aria="toTop" aria-label="MC Launcher — наверх">
+        <img src="assets/img/icon-64.png" width="32" height="32" alt="">
+        <span>MC LAUNCHER</span>
+      </a>
+      <nav class="nav" data-t-aria="sections" aria-label="Разделы">
+        <a href="#features" data-t="navFeatures">Возможности</a>
+        <a href="#shots" data-t="navShots">Скриншоты</a>
+        <a href="#faq" data-t="navFaq">Вопросы</a>
+      </nav>
+      <button class="lang" type="button" data-t-aria="langSwitch" aria-label="Switch to English"><span data-t="langOther">EN</span></button>
+      <a class="btn primary small dl-link" href="https://github.com/t0roky0/MCLauncher/releases/latest/download/MCLauncher-Setup.exe"><i data-i="download"></i><span data-t="download">Скачать</span></a>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="rays" aria-hidden="true"></div>
+      <div class="dust" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-text">
+          <p class="kicker"><i data-i="star"></i><span data-t="kicker">Бесплатный лаунчер Minecraft</span></p>
+          <h1 data-t="title">Играй<br>вместе.</h1>
+          <p class="lead" data-t="lead">Java и Bedrock в одном окне, пати до 5 человек с голосовым чатом, друзья из Xbox и скины, которые видно прямо в игре.</p>
+          <div class="cta">
+            <a class="btn primary big dl-link" href="https://github.com/t0roky0/MCLauncher/releases/latest/download/MCLauncher-Setup.exe">
+              <i data-i="download"></i><span data-t="downloadWin">Скачать для Windows</span>
+            </a>
+          </div>
+          <p class="meta"><span class="ver" data-t="latest">Последняя версия</span> · <span data-t="metaFree">Windows 10/11, 64-бит · Бесплатно</span></p>
+        </div>
+        <figure class="hero-shot">
+          <img src="assets/shots/lobby.webp" width="1600" height="1096" data-t-alt="altLobby" alt="Лобби MC Launcher: четыре друга в пати стоят рядом в 3D" fetchpriority="high">
+        </figure>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="wrap">
+        <h2 data-t="featuresTitle">Что умеет</h2>
+        <p class="sub" data-t="featuresSub">Всё, чтобы собраться с друзьями и зайти в игру одной кнопкой.</p>
+        <div class="features">
+          <article class="card">
+            <i data-i="friends"></i>
+            <h3 data-t="f1t">Пати до 5 человек</h3>
+            <p data-t="f1">Код или ссылка — и друзья у тебя в лобби. Лидер жмёт «Играть», и все попадают на одну версию и один сервер.</p>
+          </article>
+          <article class="card">
+            <i data-i="headset"></i>
+            <h3 data-t="f2t">Голосовой чат</h3>
+            <p data-t="f2">Встроенный, с шумодавом RNNoise. Голосом или рацией по кнопке, громкость каждого отдельно.</p>
+          </article>
+          <article class="card">
+            <i data-i="signal"></i>
+            <h3 data-t="f3t">Друзья из Xbox</h3>
+            <p data-t="f3">Видно, кто в сети и кто играет в Minecraft. В открытое лобби друга — в один клик, без кода.</p>
+          </article>
+          <article class="card">
+            <i data-i="hanger"></i>
+            <h3 data-t="f4t">Скины видно в игре</h3>
+            <p data-t="f4">Даже у гостя. Друзья по пати видят скины друг друга на серверах без своих скинов — от 1.8 до 26.x.</p>
+          </article>
+          <article class="card">
+            <i data-i="block"></i>
+            <h3 data-t="f5t">Java и Bedrock</h3>
+            <p data-t="f5">Оба издания в одном списке. Серверы Bedrock с пингом и иконками, один скин сразу для обоих.</p>
+          </article>
+          <article class="card">
+            <i data-i="java"></i>
+            <h3 data-t="f6t">Моды без возни</h3>
+            <p data-t="f6">Fabric, Forge, NeoForge и Quilt, своя папка у каждой установки. Нужную Java лаунчер скачает сам.</p>
+          </article>
+          <article class="card">
+            <i data-i="chat"></i>
+            <h3 data-t="f7t">Discord</h3>
+            <p data-t="f7">В профиле — «Играет в MC Launcher» с версией и пати. Друзья могут попроситься в лобби прямо из Discord.</p>
+          </article>
+          <article class="card">
+            <i data-i="sparkle"></i>
+            <h3 data-t="f8t">Твой стиль</h3>
+            <p data-t="f8">Трёхмерное лобби со скином и эмоциями, 13 цветов оформления и свой, праздничные частицы.</p>
+          </article>
+          <article class="card">
+            <i data-i="gamepad"></i>
+            <h3 data-t="f9t">Лёгкий</h3>
+            <p data-t="f9">Плавно на любом мониторе, а пока идёт игра — почти не трогает процессор и видеокарту.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="shots" class="section alt">
+      <div class="wrap">
+        <h2 data-t="shotsTitle">Как это выглядит</h2>
+        <div class="slider" aria-roledescription="carousel" data-t-aria="sliderLabel" aria-label="Скриншоты лаунчера">
+          <div class="slides">
+            <figure class="slide on" data-full="assets/shots/voice.webp" aria-roledescription="slide">
+              <img src="assets/shots/voice.webp" width="1600" height="1096" data-t-alt="s1" alt="Пати, голос и чат">
+              <figcaption><h3 data-t="s1">Пати, голос и чат</h3><p data-t="s1d">Друзья стоят рядом с тобой в лобби, а голос и чат — в панели сбоку.</p></figcaption>
+            </figure>
+            <figure class="slide" data-full="assets/shots/friends.webp" aria-roledescription="slide">
+              <img src="assets/shots/friends.webp" width="1600" height="1096" decoding="async" data-t-alt="s2" alt="Друзья из Xbox">
+              <figcaption><h3 data-t="s2">Друзья из Xbox</h3><p data-t="s2d">Кто в сети, во что играет и у кого открыто лобби — заходи в один клик.</p></figcaption>
+            </figure>
+            <figure class="slide" data-full="assets/shots/skins.webp" aria-roledescription="slide">
+              <img src="assets/shots/skins.webp" width="1600" height="1096" decoding="async" data-t-alt="s3" alt="Библиотека скинов">
+              <figcaption><h3 data-t="s3">Библиотека скинов</h3><p data-t="s3d">Добавляй PNG или бери скин любого игрока по нику и крути его в 3D.</p></figcaption>
+            </figure>
+            <figure class="slide" data-full="assets/shots/worlds.webp" aria-roledescription="slide">
+              <img src="assets/shots/worlds.webp" width="1600" height="1096" decoding="async" data-t-alt="s4" alt="Миры и серверы">
+              <figcaption><h3 data-t="s4">Миры и серверы</h3><p data-t="s4d">Последние миры с иконками и серверы с пингом прямо у кнопки «Играть».</p></figcaption>
+            </figure>
+            <figure class="slide" data-full="assets/shots/party.webp" aria-roledescription="slide">
+              <img src="assets/shots/party.webp" width="1600" height="1096" decoding="async" data-t-alt="s5" alt="Пати по коду">
+              <figcaption><h3 data-t="s5">Пати по коду</h3><p data-t="s5d">Один код на всех: лидер выбирает версию и сервер, остальные заходят следом.</p></figcaption>
+            </figure>
+            <figure class="slide" data-full="assets/shots/themes.webp" aria-roledescription="slide">
+              <img src="assets/shots/themes.webp" width="1600" height="1096" decoding="async" data-t-alt="s6" alt="Цвет на выбор">
+              <figcaption><h3 data-t="s6">Цвет на выбор</h3><p data-t="s6d">13 цветов оформления или свой — весь лаунчер перекрашивается сразу.</p></figcaption>
+            </figure>
+          </div>
+          <button class="slide-btn prev" type="button" data-t-aria="prev" aria-label="Назад"><i data-i="left"></i></button>
+          <button class="slide-btn next" type="button" data-t-aria="next" aria-label="Дальше"><i data-i="right"></i></button>
+          <div class="slide-bar"><i></i></div>
+          <div class="dots"><button type="button" aria-label="1" class="on"></button><button type="button" aria-label="2"></button><button type="button" aria-label="3"></button><button type="button" aria-label="4"></button><button type="button" aria-label="5"></button><button type="button" aria-label="6"></button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <h2 data-t="stepsTitle">Как начать</h2>
+        <ol class="steps">
+          <li><b>1</b><div><h3 data-t="st1t">Скачай</h3><p data-t="st1">Один установщик, около 110 МБ. Игру лаунчер докачает сам.</p></div></li>
+          <li><b>2</b><div><h3 data-t="st2t">Установи</h3><p data-t="st2">Если Windows покажет «Windows защитил ваш компьютер» — нажми «Подробнее» → «Выполнить в любом случае».</p></div></li>
+          <li><b>3</b><div><h3 data-t="st3t">Играй</h3><p data-t="st3">Войди через Microsoft, Xbox или гостем, позови друзей в пати и жми «Играть».</p></div></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="faq" class="section alt">
+      <div class="wrap narrow">
+        <h2 data-t="faqTitle">Вопросы</h2>
+        <details>
+          <summary data-t="q1">Это правда бесплатно?</summary>
+          <p data-t="a1">Да. Лаунчер бесплатный, без рекламы и подписок.</p>
+        </details>
+        <details>
+          <summary data-t="q2">Нужна ли лицензия Minecraft?</summary>
+          <p data-t="a2">С аккаунтом Microsoft, где есть Minecraft, играешь как обычно, на любых серверах. Через Xbox-аккаунт без Java или гостем Java запускается офлайн: одиночная игра, LAN и серверы без лицензии работают, лицензионные серверы не пустят.</p>
+        </details>
+        <details>
+          <summary data-t="q3">Почему Windows или браузер предупреждают о файле?</summary>
+          <p data-t="a3">У установщика пока нет платной цифровой подписи, поэтому SmartScreen видит «неизвестного издателя». Нажми «Подробнее» → «Выполнить в любом случае». В браузере — «Сохранить».</p>
+        </details>
+        <details>
+          <summary data-t="q4">Это безопасно для аккаунта?</summary>
+          <p data-t="a4">Вход — только на странице Microsoft, пароль лаунчер не видит. Токены хранятся зашифрованными средствами Windows, пати и голос шифруются.</p>
+        </details>
+        <details>
+          <summary data-t="q5">Как обновиться?</summary>
+          <p data-t="a5">Скачай новую версию здесь и установи поверх — настройки, скины и установки останутся.</p>
+        </details>
+        <details>
+          <summary data-t="q6">На каких системах работает?</summary>
+          <p data-t="a6">Windows 10 и 11, 64-бит. Для Bedrock нужна установленная Minecraft for Windows.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="section final">
+      <div class="wrap final-box">
+        <img src="assets/img/icon-256.png" width="96" height="96" alt="">
+        <h2 data-t="finalTitle">Позови друзей.</h2>
+        <a class="btn primary big dl-link" href="https://github.com/t0roky0/MCLauncher/releases/latest/download/MCLauncher-Setup.exe"><i data-i="download"></i><span data-t="downloadApp">Скачать MC Launcher</span></a>
+        <p class="meta"><span class="ver" data-t="latest">Последняя версия</span> · <span data-t="metaSys">Windows 10/11, 64-бит</span></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-row">
+      <span>© MC Launcher</span>
+      <a href="https://github.com/t0roky0/MCLauncher/releases" data-t="allVersions">Все версии</a>
+      <p data-t="disclaimer">Неофициальный лаунчер. Не является продуктом Minecraft и не связан с Mojang Studios или Microsoft. Minecraft — товарный знак Mojang Synergies AB.</p>
+    </div>
+  </footer>
+
+  <div class="viewer" hidden>
+    <button class="viewer-close" data-t-aria="close" aria-label="Закрыть"><i data-i="close"></i></button>
+    <img alt="">
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
