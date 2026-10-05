@@ -68,18 +68,27 @@ function showVersion() {
   for (const el of document.querySelectorAll('.ver')) el.textContent = text;
 }
 i18n.onChange(showVersion);
-if (REPO && !REPO.startsWith('__')) {
-  fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((rel) => {
-      if (!rel) return;
-      const exe = (rel.assets || []).find((a) => /\.exe$/i.test(a.name));
-      release = { version: String(rel.tag_name || '').replace(/^v/, ''), size: exe ? exe.size : 0 };
-      showVersion();
-      if (exe) for (const a of document.querySelectorAll('.dl-link')) a.href = exe.browser_download_url;
-    })
-    .catch(() => {});
-}
+// release.json sits next to the page (updated with every release), so it
+// works whatever GitHub's API rate limit says; the API is the fallback
+fetch('release.json', { cache: 'no-cache' })
+  .then((r) => (r.ok ? r.json() : Promise.reject()))
+  .then((r) => ({ version: String(r.version || ''), size: Number(r.size) || 0 }))
+  .catch(() => {
+    if (!REPO || REPO.startsWith('__')) return null;
+    return fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rel) => {
+        if (!rel) return null;
+        const exe = (rel.assets || []).find((a) => /\.exe$/i.test(a.name));
+        return { version: String(rel.tag_name || '').replace(/^v/, ''), size: exe ? exe.size : 0 };
+      });
+  })
+  .then((r) => {
+    if (!r || !r.version) return;
+    release = r;
+    showVersion();
+  })
+  .catch(() => {});
 
 // screenshots open full size
 const viewer = document.querySelector('.viewer');
