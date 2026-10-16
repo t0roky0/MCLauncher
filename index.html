@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MC Launcher — играй вместе</title>
+  <meta name="description" content="Бесплатный лаунчер Minecraft: Java и Bedrock в одном окне, пати с голосовым чатом, друзья из Xbox, оверлей в игре и косметика, которую видно прямо в игре.">
+  <meta property="og:title" content="MC Launcher — играй вместе">
+  <meta property="og:description" content="Java и Bedrock, пати с голосом, оверлей в игре, косметика и питомцы. Бесплатно.">
+  <meta property="og:image" content="assets/shots/lobby.webp">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#121110">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="assets/img/icon-64.png">
+  <link rel="apple-touch-icon" href="assets/img/icon-180.png">
+  <link rel="preload" href="assets/fonts/minecraft.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <!-- the language before the first paint, so the page doesn't flash Russian -->
+  <script src="i18n.js"></script>
+  <!-- the colour: one of the launcher's, at random on every visit -->
+  <script src="theme.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a class="brand" href="#top" data-t-aria="toTop" aria-label="MC Launcher — наверх">
+        <img src="assets/img/icon-64.png" width="32" height="32" alt="">
+        <span>MC LAUNCHER</span>
+      </a>
+      <nav class="nav" data-t-aria="sections" aria-label="Разделы">
+        <a href="#features" data-t="navFeatures">Возможности</a>
+        <a href="#cosmetics" data-t="navCosmetics">Косметика</a>
+        <a href="#redeem" data-t="navRedeem">Активация</a>
+        <a href="#topup" data-t="navTopup">Пополнение</a>
+        <a href="#faq" data-t="navFaq">Вопросы</a>
+      </nav>
+      <button class="lang" type="button" data-t-aria="langSwitch" aria-label="Switch to English"><span data-t="langOther">EN</span></button>
+      <a class="btn primary small" href="http://5.39.250.200:8080/MCLauncher-Setup.exe"><i data-i="download"></i><span data-t="download">Скачать</span></a>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- the hero: the lobby's green light, its rays and its particles; the launcher's main screen under the words -->
+    <section class="hero">
+      <div class="hero-bg" aria-hidden="true"><div class="rays"></div></div>
+      <canvas class="sky" aria-hidden="true"></canvas>
+      <div class="wrap hero-in">
+        <p class="chip"><i data-i="star"></i><span data-t="kicker">Бесплатный лаунчер Minecraft</span></p>
+        <h1 data-t="title">Играй вместе.</h1>
+        <p class="lead" data-t="lead">Java и Bedrock в одном окне, пати с голосовым чатом, друзья из Xbox, оверлей в игре — и питомцы, которые летают за тобой.</p>
+        <div class="cta">
+          <a class="btn primary big" href="http://5.39.250.200:8080/MCLauncher-Setup.exe"><i data-i="download"></i><span data-t="downloadWin">Скачать для Windows</span></a>
+          <a class="btn big" href="#redeem"><i data-i="key"></i><span data-t="haveCode">У меня есть код</span></a>
+        </div>
+        <p class="meta" data-t="meta">Windows 10/11 · 64-бит · Бесплатно</p>
+        <!-- the launcher in a 3D card: it leans, and can be pulled a little (app.js); the screenshot is in the page's colour (theme.js) -->
+        <figure class="shot">
+          <div class="shot-card">
+            <div class="shot-face">
+              <img class="shot-img" width="1977" height="1245" fetchpriority="high" draggable="false" data-t-alt="altLobby" alt="Главное меню MC Launcher: игрок в ангельских крыльях и нимбе в лобби">
+              <script>document.currentScript.previousElementSibling.src = (window.MCL_THEME || {}).shot || 'assets/shots/lobby.webp';</script>
+              <noscript><img class="shot-img" src="assets/shots/lobby.webp" width="1977" height="1245" alt=""></noscript>
+              <span class="shot-glare"></span>
+            </div>
+            <span class="pop pop-a" aria-hidden="true"><img src="assets/cosmetics/warden/icon.png" width="128" height="128" alt=""></span>
+            <span class="pop pop-b" aria-hidden="true"><img src="assets/cosmetics/capybara/icon.png" width="128" height="128" alt=""></span>
+            <span class="pop pop-c" aria-hidden="true"><img src="assets/img/coin.png" width="8" height="8" alt=""></span>
+          </div>
+        </figure>
+        <p class="shot-hint"><i data-i="drag"></i><span data-t="dragHint">Потяни за край картинки</span></p>
+      </div>
+    </section>
+
+    <section id="features" class="section">
+      <div class="wrap">
+        <h2 data-t="featuresTitle">Что умеет</h2>
+        <p class="sub" data-t="featuresSub">Всё, что нужно, чтобы играть с друзьями, — в одном окне.</p>
+        <div class="features">
+          <div class="feature"><i data-i="friends"></i><b data-t="f1t">Пати до 5 человек</b><span data-t="f1">Код или ссылка — и друзья у тебя в лобби. Лидер жмёт «Играть», все заходят вместе.</span></div>
+          <div class="feature"><i data-i="headset"></i><b data-t="f2t">Голосовой чат</b><span data-t="f2">С шумодавом. В игре слышно тех, кто рядом, — громче, когда ближе.</span></div>
+          <div class="feature"><i data-i="block"></i><b data-t="f3t">Java и Bedrock</b><span data-t="f3">Оба издания в одном списке, серверы с пингом и иконками.</span></div>
+          <div class="feature"><i data-i="image"></i><b data-t="f7t">Оверлей в игре</b><span data-t="f7">По F7: голос, чат лобби, скриншоты, запись видео и повтор последних минут.</span></div>
+          <div class="feature"><i data-i="search"></i><b data-t="f8t">Зум и яркость</b><span data-t="f8">Плавный зум с колесом, яркость в пещерах, автоспринт и низкий огонь — в обоих изданиях.</span></div>
+          <div class="feature"><i data-i="bug"></i><b data-t="f9t">Починка игры</b><span data-t="f9">Игра вылетела? Жук найдёт мод, который всё сломал, и выключит его одним нажатием.</span></div>
+          <div class="feature"><i data-i="signal"></i><b data-t="f4t">Друзья из Xbox</b><span data-t="f4">Видно, кто в сети и кто играет. Чат с друзьями прямо в лаунчере.</span></div>
+          <div class="feature"><i data-i="wings"></i><b data-t="f5t">Косметика в игре</b><span data-t="f5">Крылья, нимбы, шляпы и питомцы — их видят все, кто играет через MC Launcher.</span></div>
+          <div class="feature"><i data-i="java"></i><b data-t="f6t">Моды без возни</b><span data-t="f6">Fabric, Forge, NeoForge и Quilt. Нужную Java лаунчер скачает сам.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- the cosmetics: what there is, with its little story (no shop here) -->
+    <section id="cosmetics" class="section alt">
+      <div class="wrap">
+        <h2 data-t="cosTitle">Косметика</h2>
+        <p class="sub" data-t="cosSub">Питомцы и наборы, у каждого своя история. Достаются за задания в событиях, по кодам или за монеты в лаунчере.</p>
+        <div class="cos-grid">
+          <article class="cos" style="--c:#2ec6e8">
+            <span class="cos-new" data-t="cosNew">Новинка</span>
+            <div class="cos-art"><img src="assets/cosmetics/warden/icon.png" width="128" height="128" alt=""></div>
+            <p class="cos-kind" data-t="kindPet">Питомец</p>
+            <h3>Warden</h3>
+            <p class="cos-story" data-t="sWarden">Самый маленький Варден Древнего города. Сбежал, потому что никто не верил, что он страшный. Всё слышит своими ушками — даже как ты крадёшься к сундуку.</p>
+          </article>
+          <article class="cos" style="--c:#d08a57">
+            <div class="cos-art"><img src="assets/cosmetics/capybara/icon.png" width="128" height="128" alt=""></div>
+            <p class="cos-kind" data-t="kindPet">Питомец</p>
+            <h3>Capybara</h3>
+            <p class="cos-story" data-t="sCapybara">Жила себе на болоте, пока Крипер не взорвал ей домик. Теперь летает за тобой и делает вид, что всё под контролем.</p>
+          </article>
+          <article class="cos" style="--c:#e8ecff">
+            <div class="cos-art"><img src="assets/cosmetics/balaboom/icon.png" width="128" height="128" alt=""></div>
+            <p class="cos-kind" data-t="kindPet">Питомец</p>
+            <h3>Coalie</h3>
+            <p class="cos-story" data-t="sCoalie">Выпал из костра вместо угля — и ему понравилось. Боится воды и Эндерменов, но тебя почему-то нет.</p>
+          </article>
+          <article class="cos" style="--c:#ffffff">
+            <div class="cos-art two"><img src="assets/cosmetics/fallen_wings/icon.png" width="96" height="96" alt=""><img src="assets/cosmetics/horned_halo/icon.png" width="96" height="96" alt=""></div>
+            <p class="cos-kind" data-t="kindPack">Набор</p>
+            <h3>Fallen Angel</h3>
+            <p class="cos-story" data-t="sFallen">Крылья почернели после ночёвки в Незере без кровати. Нимб остался — теперь с рожками, для солидности.</p>
+          </article>
+          <article class="cos" style="--c:#f48686">
+            <div class="cos-art two"><img src="assets/cosmetics/devil_wings/icon.png" width="96" height="96" alt=""><img src="assets/cosmetics/devil_horns/icon.png" width="96" height="96" alt=""></div>
+            <p class="cos-kind" data-t="kindPack">Набор</p>
+            <h3>Sweet Devil</h3>
+            <p class="cos-story" data-t="sDevil">Чертёнок из бастиона выменял у пиглинов всё золото на розовую краску. Пиглины до сих пор не поняли, кто кого обманул.</p>
+          </article>
+          <article class="cos" style="--c:#ecb84f">
+            <div class="cos-art two"><img src="assets/cosmetics/angel_wings/icon.png" width="96" height="96" alt=""><img src="assets/cosmetics/halo/icon.png" width="96" height="96" alt=""></div>
+            <p class="cos-kind" data-t="kindPack">Набор</p>
+            <h3>Angel Pack</h3>
+            <p class="cos-story" data-t="sAngel">Говорят, их выдают тем, кто ни разу не строил столб из земли под собой. Шутка — их просто можно получить.</p>
+          </article>
+        </div>
+        <!-- the event's own: for its quests -->
+        <div class="event">
+          <div class="event-text">
+            <p class="cos-kind" data-t="eventKind">Событие · весь октябрь</p>
+            <h3 data-t="eventTitle">Хэллоуин</h3>
+            <p data-t="eventSub">Шляпа ведьмы, метла, крылья летучей мыши, топор в голове и хоккейная маска — за задания в игре. Заходи в лаунчер, задания уже ждут.</p>
+          </div>
+          <div class="event-art">
+            <img src="assets/cosmetics/witch_hat/icon.png" width="72" height="72" alt="">
+            <img src="assets/cosmetics/bat_wings/icon.png" width="72" height="72" alt="">
+            <img src="assets/cosmetics/broom/icon.png" width="72" height="72" alt="">
+            <img src="assets/cosmetics/axe_in_head/icon.png" width="72" height="72" alt="">
+            <img src="assets/cosmetics/hockey_mask/icon.png" width="72" height="72" alt="">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- a code: handed to the launcher (mclauncher://redeem/…), activated there by the player -->
+    <section id="redeem" class="section">
+      <div class="wrap narrow">
+        <div class="redeem">
+          <div class="redeem-head"><i data-i="key"></i><h2 data-t="redeemTitle">Активация кода</h2></div>
+          <p class="sub" data-t="redeemSub">Есть код на косметику? Введи его — лаунчер откроется с ним сам, останется нажать «Активировать». Косметика привяжется к твоему Xbox-аккаунту.</p>
+          <form class="redeem-form" novalidate>
+            <input class="redeem-input" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="18" placeholder="MCL-XXXX-XXXX-XXXX" data-t-aria="codeAria" aria-label="Код активации">
+            <button class="btn primary big" type="submit"><i data-i="key"></i><span data-t="redeemBtn">Активировать</span></button>
+          </form>
+          <p class="redeem-note" role="status" aria-live="polite"></p>
+          <ol class="steps">
+            <li><b>1</b><span data-t="r1">Установи MC Launcher и войди через Xbox.</span></li>
+            <li><b>2</b><span data-t="r2">Введи код здесь или в лаунчере: «Настройки» → «Код активации».</span></li>
+            <li><b>3</b><span data-t="r3">Косметика появится в «Скинах» — надевай. Каждый код работает один раз.</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- top-up: coming (no payments yet) -->
+    <section id="topup" class="section alt">
+      <div class="wrap">
+        <h2 data-t="topupTitle">Пополнение</h2>
+        <p class="sub" data-t="topupSub">Монеты для косметики в лаунчере. Пополнение скоро откроется — а пока косметику дают за задания в событиях и по кодам.</p>
+        <div class="topup">
+          <div class="pack-coin"><img src="assets/img/coin.png" width="48" height="48" alt=""><b>300</b><span data-t="coinsWord">монет</span><em data-t="soon">Скоро</em></div>
+          <div class="pack-coin"><img src="assets/img/coin.png" width="48" height="48" alt=""><b>600</b><span data-t="coinsWord">монет</span><em data-t="soon">Скоро</em></div>
+          <div class="pack-coin best"><span class="best-tag" data-t="best">Выгодно</span><img src="assets/img/coin.png" width="48" height="48" alt=""><b>1200</b><span data-t="coinsWord">монет</span><em data-t="soon">Скоро</em></div>
+        </div>
+        <p class="note center" data-t="topupNote">Лаунчер был и останется бесплатным. Косметика — только для красоты и на игру не влияет.</p>
+      </div>
+    </section>
+
+    <section id="faq" class="section">
+      <div class="wrap narrow">
+        <h2 data-t="faqTitle">Вопросы</h2>
+        <details>
+          <summary data-t="q1">Это правда бесплатно?</summary>
+          <p data-t="a1">Да. Лаунчер бесплатный, без рекламы и подписок. Косметика — только для красоты и на игру не влияет.</p>
+        </details>
+        <details>
+          <summary data-t="q8">Где взять код на косметику?</summary>
+          <p data-t="a8">Коды раздаём в событиях и розыгрышах. Каждый код срабатывает один раз; если набор у тебя уже есть, код не тратится — можно отдать его другу.</p>
+        </details>
+        <details>
+          <summary data-t="q2">Нужна ли лицензия Minecraft?</summary>
+          <p data-t="a2">С аккаунтом Microsoft, где есть Minecraft, играешь как обычно, на любых серверах. С Xbox-аккаунтом без Java она запускается офлайн: одиночная игра, LAN и серверы без лицензии работают, лицензионные серверы не пустят.</p>
+        </details>
+        <details>
+          <summary data-t="q9">Кто видит мою косметику?</summary>
+          <p data-t="a9">Все, кто играет через MC Launcher, — и в Java, и в Bedrock. На серверах со своими паками (например, The Hive) в Bedrock её пока не видно.</p>
+        </details>
+        <details>
+          <summary data-t="q3">Почему Windows или браузер предупреждают о файле?</summary>
+          <p data-t="a3">У установщика пока нет платной цифровой подписи, поэтому SmartScreen видит «неизвестного издателя». Нажми «Подробнее» → «Выполнить в любом случае». В браузере — «Сохранить».</p>
+        </details>
+        <details>
+          <summary data-t="q5">Как обновиться?</summary>
+          <p data-t="a5">Никак — лаунчер сам скачивает новую версию в фоне и ставит её, когда ты его закрываешь.</p>
+        </details>
+        <details>
+          <summary data-t="q6">На каких системах работает?</summary>
+          <p data-t="a6">Windows 10 и 11, 64-бит. Для Bedrock нужна установленная Minecraft for Windows.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="wrap final-box">
+        <img src="assets/img/icon-256.png" width="104" height="104" alt="">
+        <h2 data-t="finalTitle">Позови друзей.</h2>
+        <a class="btn primary big" href="http://5.39.250.200:8080/MCLauncher-Setup.exe"><i data-i="download"></i><span data-t="downloadApp">Скачать MC Launcher</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#top"><img src="assets/img/icon-64.png" width="28" height="28" alt=""><span>MC LAUNCHER</span></a>
+        <p data-t="disclaimer">Неофициальный лаунчер. Не является продуктом Minecraft и не связан с Mojang Studios или Microsoft. Minecraft — товарный знак Mojang Synergies AB.</p>
+      </div>
+      <div class="foot-col">
+        <b data-t="launcher">Лаунчер</b>
+        <a href="http://5.39.250.200:8080/MCLauncher-Setup.exe" data-t="downloadShort">Скачать</a>
+        <a href="#redeem" data-t="navRedeem">Активация</a>
+        <a href="#faq" data-t="navFaq">Вопросы</a>
+      </div>
+      <div class="foot-col">
+        <b data-t="project">Проект</b>
+        <a href="https://github.com/t0roky0/MCLauncher" rel="noopener" data-t="source">Исходный код</a>
+        <span>© 2026 MC Launcher</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js" defer></script>
+  <script src="assets/js/sky.js" defer></script>
+</body>
+</html>
