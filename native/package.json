@@ -1,0 +1,9 @@
+{
+  "name": "mcnative",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The launcher's C++ side (Node-API addon). Built by scripts/build-native.mjs.",
+  "binary": {
+    "napi_versions": [8]
+  }
+}

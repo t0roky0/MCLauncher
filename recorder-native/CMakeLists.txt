@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(MCLauncherRecorder LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+add_compile_definitions(UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00)
+add_compile_options(/W3 /EHsc /utf-8)
+add_executable(mcl-recorder src/recorder.cpp)
+target_link_libraries(mcl-recorder PRIVATE d3d11 dxgi mfplat mfreadwrite mfuuid ole32 oleaut32 user32 winmm)

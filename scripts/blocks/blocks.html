@@ -1,0 +1,614 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+body { margin: 0; padding: 10px; background: #1c1b1a; color: #ccc; font: 11px Segoe UI; display: flex; flex-wrap: wrap; gap: 6px; }
+.cell { display: flex; flex-direction: column; align-items: center; background: #262423; padding: 4px; }
+.cell img { width: 150px; height: 150px; }
+</style>
+<script src="vanilla-textures.js"></script>
+<script>
+// The launcher's block icons: our own 16x16 pixel textures on isometric
+// boxes, one light for all (top +6%, left −22%, right −42%), 300x300.
+
+// ---- tiny pixel toolkit ----------------------------------------------------------------
+function rng(seed) {
+  let s = (seed * 2654435761) >>> 0;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+}
+function tex(seed, fn) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d');
+  fn(g, rng(seed));
+  return c;
+}
+const px = (g, x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
+const rect = (g, x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+// blotchy value noise → palette index (like the bedrock block)
+function organic(g, r, pal, { blots = 14, amp = 1.6, jitter = 1.6, bias = (pal.length - 1) / 2, x0 = 0, y0 = 0, w = 16, h = 16 } = {}) {
+  const v = Array.from({ length: h }, () => new Array(w).fill(0));
+  for (let k = 0; k < blots; k++) {
+    const cx = r() * w, cy = r() * h, rad = 1.2 + r() * 2.6, a = r() * 2 - 0.9;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const dx = Math.min(Math.abs(x - cx), w - Math.abs(x - cx)), dy = Math.min(Math.abs(y - cy), h - Math.abs(y - cy));
+      const d = Math.hypot(dx, dy);
+      if (d < rad) v[y][x] += a * (1 - d / rad);
+    }
+  }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let i = Math.round(bias + v[y][x] * amp + (r() - 0.5) * jitter);
+    i = Math.max(0, Math.min(pal.length - 1, i));
+    px(g, x0 + x, y0 + y, pal[i]);
+  }
+}
+// rounded stones with darker joints
+function cobble(g, r, pal, joint, { cells = 9, x0 = 0, y0 = 0, w = 16, h = 16 } = {}) {
+  const pts = Array.from({ length: cells }, () => [r() * w, r() * h, Math.floor(r() * pal.length)]);
+  const owner = (x, y) => {
+    let best = 0, bd = 1e9;
+    pts.forEach(([px_, py_], i) => {
+      for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) {
+        const d = (x + 0.5 - px_ - ox) ** 2 + (y + 0.5 - py_ - oy) ** 2;
+        if (d < bd) { bd = d; best = i; }
+      }
+    });
+    return best;
+  };
+  const own = [];
+  for (let y = 0; y < h; y++) { own.push([]); for (let x = 0; x < w; x++) own[y].push(owner(x, y)); }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const o = own[y][x];
+    const edge = own[y][(x + 1) % w] !== o || own[(y + 1) % h][x] !== o;
+    const base = pts[o][2];
+    const tone = Math.max(0, Math.min(pal.length - 1, base + (r() < 0.25 ? 1 : r() < 0.2 ? -1 : 0)));
+    px(g, x0 + x, y0 + y, edge ? joint : pal[tone]);
+  }
+}
+// boards across, staggered seams, grain
+function planks(g, r, pal, edge, { x0 = 0, y0 = 0, w = 16, h = 16, board = 4 } = {}) {
+  for (let y = 0; y < h; y++) {
+    const b = Math.floor(y / board);
+    const seam = (b * 7 + 3) % w;
+    for (let x = 0; x < w; x++) {
+      let i = 2 + (r() < 0.18 ? -1 : r() < 0.12 ? 1 : 0);
+      if ((y % board) === board - 1) i = 0;
+      if (x === seam && (y % board) !== board - 1) i = 0;
+      if ((y % board) === 0 && i > 0) i = Math.min(pal.length - 1, i + 1);
+      px(g, x0 + x, y0 + y, i === 0 ? edge : pal[i]);
+    }
+  }
+}
+function map(g, rows, pal, x0 = 0, y0 = 0) {
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) px(g, x0 + x, y0 + y, pal[ch]); }));
+}
+function border(g, col, x0 = 0, y0 = 0, w = 16, h = 16) {
+  rect(g, x0, y0, w, 1, col); rect(g, x0, y0 + h - 1, w, 1, col); rect(g, x0, y0, 1, h, col); rect(g, x0 + w - 1, y0, 1, h, col);
+}
+function ore(g, r, stonePal, ore3, clusters = 5) {
+  organic(g, r, stonePal, { jitter: 1.4 });
+  const shapes = [[[0, 0], [1, 0], [0, 1]], [[0, 0], [1, 0], [1, 1], [0, 1]], [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]], [[0, 0], [1, 1], [2, 1]]];
+  for (let k = 0; k < clusters; k++) {
+    const sx = 1 + Math.floor(r() * 12), sy = 1 + Math.floor(r() * 12);
+    const sh = shapes[Math.floor(r() * shapes.length)];
+    sh.forEach(([dx, dy], i) => px(g, sx + dx, sy + dy, i === 0 ? ore3[1] : r() < 0.35 ? ore3[2] : ore3[0]));
+    px(g, sx + sh[sh.length - 1][0] + 1, sy + sh[sh.length - 1][1], ore3[2]);
+  }
+}
+
+// ---- palettes --------------------------------------------------------------------------
+const STONE = ['#5d5d5d', '#6b6b6b', '#787878', '#858585', '#929292', '#a0a0a0'];
+const COBBLE = ['#5e5e5e', '#6f6f6f', '#808080', '#8f8f8f', '#9d9d9d'];
+const DIRT = ['#593b22', '#6b472a', '#7b5332', '#8b5f3b', '#9a6c45'];
+const GRASS = ['#3d7424', '#4b882c', '#599c35', '#67ad3d', '#77bd48', '#88cb56'];
+const OAK = ['#5e3f1e', '#86602f', '#9f7442', '#b2864f', '#c3975c'];
+const DARKWOOD = ['#3f2a14', '#5c3d1d', '#6e4a25', '#7f572c', '#8d6334'];
+
+// ---- textures --------------------------------------------------------------------------
+const T = {};
+T.grassTop = tex(1, (g, r) => organic(g, r, GRASS, { jitter: 2 }));
+T.dirt = tex(2, (g, r) => { organic(g, r, DIRT, { jitter: 1.8 }); for (let k = 0; k < 5; k++) px(g, Math.floor(r() * 16), 5 + Math.floor(r() * 11), r() < 0.5 ? '#7d7d7d' : '#6a6a6a'); });
+T.grassSide = tex(3, (g, r) => {
+  g.drawImage(T.dirt, 0, 0);
+  for (let x = 0; x < 16; x++) {
+    const drop = 3 + (r() < 0.45 ? 1 : 0) + (r() < 0.2 ? 1 : 0);
+    for (let y = 0; y < drop; y++) px(g, x, y, GRASS[Math.max(0, Math.min(5, 3 - Math.floor(y / 2) + (r() < 0.3 ? 1 : 0)))]);
+  }
+});
+T.stone = tex(4, (g, r) => organic(g, r, STONE, { jitter: 1.4 }));
+T.cobble = tex(5, (g, r) => cobble(g, r, COBBLE, '#4a4a4a'));
+T.oak = tex(6, (g, r) => planks(g, r, OAK, '#5a3c1c'));
+
+// chest (box 1..15 wide, 14 tall): wood with a dark frame, the lid seam, the latch
+function chestSide(seed, pal, frame, seam, latch) {
+  return tex(seed, (g, r) => {
+    planks(g, r, pal, frame, { board: 5 });
+    border(g, frame, 1, 2, 14, 14);
+    rect(g, 1, 6, 14, 1, seam);
+    if (latch) map(g, ['LL', 'Ll', 'll'], latch, 7, 5);
+  });
+}
+function chestTop(seed, pal, frame) {
+  return tex(seed, (g, r) => { planks(g, r, pal, frame, { board: 5 }); border(g, frame, 1, 1, 14, 14); });
+}
+T.chestFront = chestSide(7, ['#6b4a22', '#a06c33', '#b57d3e', '#c58e4b', '#d29c56'], '#3d2611', '#4d3016', { L: '#e3e3e3', l: '#9c9c9c' });
+T.chestSide = chestSide(8, ['#6b4a22', '#a06c33', '#b57d3e', '#c58e4b', '#d29c56'], '#3d2611', '#4d3016', null);
+T.chestTop = chestTop(9, ['#6b4a22', '#a06c33', '#b57d3e', '#c58e4b', '#d29c56'], '#3d2611');
+const ENDER = ['#0b0f13', '#141b22', '#1b252e', '#22303a', '#2a3b47'];
+T.enderFront = tex(10, (g, r) => { organic(g, r, ENDER, { jitter: 1.2 }); border(g, '#05080a', 1, 2, 14, 14); border(g, '#2e4350', 2, 3, 12, 12); rect(g, 1, 6, 14, 1, '#05080a'); map(g, ['GG', 'Gd', 'gg'], { G: '#58e3c2', g: '#2a9d86', d: '#0d1f1c' }, 7, 5); for (let k = 0; k < 5; k++) px(g, 2 + Math.floor(r() * 12), 8 + Math.floor(r() * 6), '#1f5f58'); });
+T.enderSide = tex(11, (g, r) => { organic(g, r, ENDER, { jitter: 1.2 }); border(g, '#05080a', 1, 2, 14, 14); border(g, '#2e4350', 2, 3, 12, 12); rect(g, 1, 6, 14, 1, '#05080a'); for (let k = 0; k < 4; k++) px(g, 2 + Math.floor(r() * 12), 3 + Math.floor(r() * 12), '#1f5f58'); });
+T.enderTop = tex(12, (g, r) => { organic(g, r, ENDER, { jitter: 1.2 }); border(g, '#05080a', 1, 1, 14, 14); border(g, '#2e4350', 2, 2, 12, 12); rect(g, 6, 6, 4, 4, '#173c3a'); px(g, 7, 7, '#3fbfa5'); px(g, 8, 8, '#3fbfa5'); });
+
+// barrel
+const BARREL = ['#4d321a', '#6e4a28', '#7e5630', '#8d6137', '#9b6b3e'];
+T.barrelSide = tex(13, (g, r) => {
+  for (let x = 0; x < 16; x++) {
+    const stave = Math.floor(x / 4);
+    const base = 2 + ((stave * 3) % 3 === 0 ? 0 : stave % 2 ? 1 : -1);
+    for (let y = 0; y < 16; y++) {
+      let i = base + (r() < 0.15 ? -1 : r() < 0.1 ? 1 : 0);
+      if (x % 4 === 3) i = 0;
+      px(g, x, y, BARREL[Math.max(0, Math.min(4, i))]);
+    }
+  }
+  for (const by of [2, 12]) { rect(g, 0, by, 16, 2, '#3a3a3a'); rect(g, 0, by, 16, 1, '#5c5c5c'); }
+});
+T.barrelTop = tex(14, (g, r) => {
+  planks(g, r, BARREL.map((c) => c), '#4d321a', { board: 4 });
+  border(g, '#3a2512'); border(g, '#5a3a1e', 1, 1, 14, 14);
+  rect(g, 6, 6, 4, 4, '#24160c'); rect(g, 6, 6, 4, 1, '#3a2512');
+});
+
+// shulker box
+const SHULK = ['#5a3268', '#734384', '#8a559c', '#9e66b0', '#b37fc4', '#c597d3'];
+T.shulkSide = tex(15, (g, r) => {
+  organic(g, r, SHULK.slice(2), { jitter: 1, x0: 0, y0: 0, w: 16, h: 9, bias: 1.4 });
+  organic(g, r, SHULK.slice(0, 4), { jitter: 1, x0: 0, y0: 9, w: 16, h: 7, bias: 1.8 });
+  rect(g, 0, 9, 16, 1, '#3d1f48');
+  border(g, '#4a2858');
+});
+T.shulkTop = tex(16, (g, r) => { organic(g, r, SHULK.slice(2), { jitter: 1, bias: 1.6 }); border(g, '#4a2858'); border(g, '#8a559c', 1, 1, 14, 14); rect(g, 6, 6, 4, 4, '#c597d3'); });
+
+// crafting table
+T.craftTop = tex(17, (g, r) => {
+  organic(g, r, ['#8d6234', '#a0723e', '#b0814a', '#bf9056'], { jitter: 1.2, bias: 1.8, blots: 8 });
+  border(g, '#4a3016'); border(g, '#6b4423', 1, 1, 14, 14);
+  for (const k of [5, 10]) { rect(g, 2, k, 12, 1, '#4f3318'); rect(g, k, 2, 1, 12, '#4f3318'); }
+});
+T.craftFront = tex(18, (g, r) => {
+  planks(g, r, OAK, '#5a3c1c');
+  rect(g, 0, 0, 16, 3, '#6b4423'); rect(g, 0, 3, 16, 1, '#4a2e14');
+  // a saw and a hammer hanging on the front
+  map(g, ['bb.....', 'bbsssss', 'b.sssss', '..s.s.s'], { s: '#dcdcdc', b: '#4a2e14' }, 1, 6);
+  map(g, ['HHHH', 'hhhh', '.bb.', '.bb.', '.bb.'], { H: '#b9b9b9', h: '#7d7d7d', b: '#4a2e14' }, 10, 9);
+});
+T.craftSide = tex(19, (g, r) => {
+  planks(g, r, OAK, '#5a3c1c');
+  rect(g, 0, 0, 16, 3, '#6b4423'); rect(g, 0, 3, 16, 1, '#4a2e14');
+  map(g, ['ppp..', '.b...', '..b..', '...b.'], { p: '#9a9a9a', b: '#6e4a26' }, 5, 7);
+});
+
+// furnaces
+T.furnaceFront = tex(20, (g, r) => {
+  cobble(g, r, COBBLE, '#4a4a4a');
+  rect(g, 3, 3, 10, 2, '#2a2a2a');
+  rect(g, 2, 8, 12, 7, '#5a5a5a');
+  rect(g, 3, 9, 10, 5, '#151515');
+  for (const x of [5, 8, 11]) rect(g, x, 9, 1, 5, '#2c2c2c');
+});
+T.furnaceTop = tex(21, (g, r) => { organic(g, r, STONE, { jitter: 1.2, bias: 3 }); border(g, '#5a5a5a'); });
+const SMOOTH = ['#6a6a6a', '#777777', '#848484', '#909090'];
+T.blastSide = tex(22, (g, r) => { organic(g, r, SMOOTH, { jitter: 1, blots: 8 }); border(g, '#3a3a3a'); border(g, '#555555', 1, 1, 14, 14); rect(g, 1, 7, 14, 1, '#3a3a3a'); });
+T.blastFront = tex(23, (g, r) => {
+  organic(g, r, SMOOTH, { jitter: 1, blots: 8 });
+  border(g, '#3a3a3a'); border(g, '#555555', 1, 1, 14, 14);
+  rect(g, 3, 3, 10, 2, '#262626');
+  rect(g, 3, 7, 10, 7, '#141414');
+  for (const x of [4, 6, 8, 10, 12]) rect(g, x, 7, 1, 7, '#4d4d4d');
+  rect(g, 3, 7, 10, 1, '#5e5e5e');
+});
+T.blastTop = tex(24, (g, r) => { organic(g, r, ['#3a3a3a', '#444444', '#4e4e4e', '#585858'], { jitter: 1 }); border(g, '#2a2a2a'); for (const k of [5, 8, 11]) rect(g, 4, k, 8, 1, '#1e1e1e'); });
+
+// anvil iron
+const IRON = ['#2f2f2f', '#3b3b3b', '#474747', '#535353', '#606060', '#6e6e6e'];
+T.anvil = tex(25, (g, r) => organic(g, r, IRON, { jitter: 1.2 }));
+T.anvilTop = tex(26, (g, r) => { organic(g, r, IRON, { jitter: 1.2, bias: 3 }); rect(g, 4, 3, 8, 10, '#707070'); organic(g, r, ['#626262', '#6c6c6c', '#777777', '#828282'], { x0: 5, y0: 4, w: 6, h: 8, jitter: 1 }); });
+
+// enchanting table
+const OBSID = ['#0e0a16', '#150f21', '#1d152d', '#261c3a', '#31244a'];
+T.enchSide = tex(27, (g, r) => {
+  organic(g, r, OBSID, { jitter: 1.2 });
+  rect(g, 0, 4, 16, 3, '#a8232a'); rect(g, 0, 6, 16, 1, '#7a161c'); rect(g, 0, 4, 16, 1, '#c63a3f');
+  for (const x of [2, 13]) { px(g, x, 5, '#5fe6dc'); }
+  for (let k = 0; k < 5; k++) px(g, Math.floor(r() * 16), 8 + Math.floor(r() * 7), '#5a3c8c');
+});
+T.enchTop = tex(28, (g, r) => {
+  organic(g, r, ['#8c1b21', '#a1232a', '#b42c33', '#c53a40'], { jitter: 1.2 });
+  border(g, '#140e1e'); border(g, '#2a1c3c', 1, 1, 14, 14);
+  for (const [x, y] of [[2, 2], [13, 2], [2, 13], [13, 13]]) { px(g, x, y, '#5fe6dc'); }
+});
+T.bookTop = tex(29, (g) => {
+  rect(g, 0, 0, 16, 16, '#6b3a1c');
+  rect(g, 1, 1, 14, 14, '#efe7d4');
+  rect(g, 7, 1, 2, 14, '#c9bda4');
+  for (const y of [3, 5, 7, 9, 11]) { rect(g, 2, y, 4, 1, '#9c917c'); rect(g, 10, y, 4, 1, '#9c917c'); }
+});
+T.bookSide = tex(30, (g) => { rect(g, 0, 0, 16, 16, '#6b3a1c'); rect(g, 0, 0, 16, 1, '#8a4d26'); rect(g, 1, 1, 14, 1, '#efe7d4'); });
+
+// beacon
+T.glass = tex(31, (g, r) => {
+  rect(g, 0, 0, 16, 16, 'rgba(170,230,255,0.08)');
+  border(g, 'rgba(215,247,255,0.92)');
+  for (let k = 0; k < 4; k++) px(g, 3 + k, 3 + k, 'rgba(255,255,255,0.55)');
+  px(g, 11, 4, 'rgba(255,255,255,0.45)'); px(g, 12, 5, 'rgba(255,255,255,0.45)');
+});
+T.core = tex(32, (g, r) => { organic(g, r, ['#139fd0', '#2fc6f0', '#6fe4ff', '#c9f9ff'], { jitter: 1, bias: 1.8 }); border(g, '#0d7fae'); rect(g, 6, 6, 4, 4, '#e9feff'); });
+T.obsid = tex(33, (g, r) => organic(g, r, OBSID, { jitter: 1.2 }));
+
+// sticky piston
+const SLIME = ['#3f7d26', '#4f962f', '#62ad3a', '#76c24a', '#8fd662', '#a8e57c'];
+T.pistonTop = tex(34, (g, r) => {
+  planks(g, r, ['#5e4020', '#8a6232', '#9c7040', '#ad7f4b', '#ba8b55'], '#5a3c1c');
+  organic(g, r, SLIME, { x0: 2, y0: 2, w: 12, h: 12, jitter: 1.4, bias: 2.6 });
+  border(g, '#3d6e24', 2, 2, 12, 12);
+});
+T.pistonSide = tex(35, (g, r) => {
+  cobble(g, r, COBBLE, '#4a4a4a');
+  planks(g, r, ['#5e4020', '#8a6232', '#9c7040', '#ad7f4b', '#ba8b55'], '#5a3c1c', { y0: 0, h: 4, board: 4 });
+  rect(g, 0, 4, 16, 1, '#3a2a16');
+  rect(g, 7, 5, 2, 9, '#5a5a5a'); rect(g, 7, 5, 1, 9, '#7a7a7a');
+});
+T.pistonBottom = T.cobble;
+
+// slime block
+T.slimeOuter = tex(36, (g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, `rgba(${110 + Math.floor(r() * 25)},${200 + Math.floor(r() * 30)},${80 + Math.floor(r() * 20)},0.42)`);
+  border(g, '#5aa63a');
+  px(g, 2, 2, 'rgba(230,255,210,0.7)'); px(g, 3, 2, 'rgba(230,255,210,0.5)'); px(g, 2, 3, 'rgba(230,255,210,0.5)');
+});
+T.slimeInner = tex(37, (g, r) => { organic(g, r, ['#3f8a28', '#4b9a30', '#58ab39', '#66bb43'], { jitter: 1 }); });
+
+// hay bale
+const HAY = ['#9c7a20', '#b48f28', '#c9a32f', '#d8b43c', '#e6c650'];
+T.haySide = tex(38, (g, r) => {
+  for (let x = 0; x < 16; x++) {
+    const col = 1 + Math.floor(r() * 3);
+    for (let y = 0; y < 16; y++) px(g, x, y, HAY[Math.max(0, Math.min(4, col + (r() < 0.2 ? 1 : r() < 0.15 ? -1 : 0)))]);
+  }
+  for (const by of [2, 12]) { rect(g, 0, by, 16, 2, '#7a3f17'); rect(g, 0, by, 16, 1, '#9a5420'); }
+});
+T.hayTop = tex(39, (g, r) => {
+  organic(g, r, HAY, { jitter: 1.6, bias: 2 });
+  for (const k of [3, 6]) border(g, 'rgba(120,90,20,0.55)', k, k, 16 - 2 * k, 16 - 2 * k);
+  for (const by of [2, 12]) { rect(g, 0, by, 1, 2, '#7a3f17'); rect(g, 15, by, 1, 2, '#7a3f17'); }
+});
+
+// TNT
+T.tntSide = tex(40, (g, r) => {
+  for (let x = 0; x < 16; x++) {
+    const tone = x % 4 === 0 ? '#a52a21' : x % 4 === 2 ? '#d84a3c' : '#c33a2e';
+    for (let y = 0; y < 16; y++) px(g, x, y, r() < 0.08 ? '#9a241c' : tone);
+  }
+  rect(g, 0, 5, 16, 6, '#e8e8e8'); rect(g, 0, 10, 16, 1, '#c9c9c9'); rect(g, 0, 5, 16, 1, '#f6f6f6');
+  map(g, ['TTT.N..N.TTT', '.T..NN.N..T.', '.T..N.NN..T.', '.T..N..N..T.'], { T: '#262626', N: '#262626' }, 2, 6);
+});
+T.tntTop = tex(41, (g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, r() < 0.1 ? '#a52a21' : '#c33a2e');
+  rect(g, 4, 4, 8, 8, '#d9d9d9'); rect(g, 5, 5, 6, 6, '#a9a9a9'); rect(g, 6, 6, 4, 4, '#3a3a3a'); rect(g, 7, 7, 2, 2, '#1a1a1a');
+});
+
+// cake (box 1..15, 8 tall)
+T.cakeTop = tex(42, (g, r) => {
+  organic(g, r, ['#e2d6c9', '#ece2d7', '#f5eee6', '#fbf7f2'], { jitter: 1, bias: 2.2 });
+  for (let k = 0; k < 7; k++) px(g, 2 + Math.floor(r() * 12), 2 + Math.floor(r() * 12), r() < 0.7 ? '#e03a3a' : '#ffffff');
+  border(g, '#d9cbbd', 1, 1, 14, 14);
+});
+T.cakeSide = tex(43, (g, r) => {
+  organic(g, r, ['#ad7444', '#bf8452', '#cf945f', '#dda36c'], { jitter: 1.4, y0: 8, h: 8, bias: 1.6 });
+  rect(g, 0, 12, 16, 1, '#efe3d3');
+  for (let x = 0; x < 16; x++) {
+    const drip = 8 + 2 + (r() < 0.35 ? 1 : 0) + (r() < 0.15 ? 1 : 0);
+    for (let y = 8; y < drip; y++) px(g, x, y, y === 8 ? '#fbf7f2' : '#efe6dc');
+  }
+});
+
+// ores
+T.diamondOre = tex(44, (g, r) => ore(g, r, STONE, ['#3ddccb', '#b2fff6', '#16958a']));
+T.emeraldOre = tex(45, (g, r) => ore(g, r, STONE, ['#1fc862', '#9cf7b8', '#0c7836'], 4));
+
+// bee nest
+const NEST = ['#9a6a32', '#b17a3e', '#c48b4b', '#d39c5b', '#e0ad6c'];
+T.nestSide = tex(46, (g, r) => {
+  for (let y = 0; y < 16; y++) {
+    const band = y % 4 === 3 ? 0 : 2 + (Math.floor(y / 4) % 2);
+    for (let x = 0; x < 16; x++) px(g, x, y, NEST[Math.max(0, Math.min(4, band + (r() < 0.15 ? -1 : r() < 0.1 ? 1 : 0)))]);
+  }
+});
+T.nestFront = tex(47, (g, r) => {
+  g.drawImage(T.nestSide, 0, 0);
+  rect(g, 5, 8, 6, 4, '#2b190b'); rect(g, 6, 7, 4, 1, '#2b190b');
+  for (const [x, y] of [[5, 12], [6, 13], [10, 12], [9, 12]]) px(g, x, y, '#f4b53a');
+  px(g, 6, 12, '#ffd36b');
+});
+T.nestTop = tex(48, (g, r) => {
+  organic(g, r, NEST, { jitter: 1.2, bias: 2.4 });
+  for (const k of [2, 5]) border(g, '#9a6a32', k, k, 16 - 2 * k, 16 - 2 * k);
+  px(g, 7, 7, '#f4b53a'); px(g, 8, 8, '#ffd36b');
+});
+
+// sculk
+const SCULK = ['#05101a', '#091a24', '#0d232f', '#11303d', '#163c4a'];
+function sculkGlow(g, r, n) {
+  for (let k = 0; k < n; k++) {
+    const x = 1 + Math.floor(r() * 13), y = 1 + Math.floor(r() * 13);
+    px(g, x, y, '#8ff7f2'); px(g, x + 1, y, '#2ad1d1'); px(g, x, y + 1, '#1b9a9e');
+  }
+}
+T.sculk = tex(49, (g, r) => { organic(g, r, SCULK, { jitter: 1.6 }); sculkGlow(g, r, 5); });
+T.sensorSide = tex(50, (g, r) => { organic(g, r, SCULK, { jitter: 1.6, y0: 8, h: 8 }); rect(g, 0, 8, 16, 1, '#1d5b66'); sculkGlow(g, r, 0); px(g, 4, 11, '#2ad1d1'); px(g, 11, 13, '#2ad1d1'); });
+T.sensorTop = tex(51, (g, r) => { organic(g, r, SCULK, { jitter: 1.6 }); border(g, '#1d5b66'); sculkGlow(g, r, 3); });
+T.tendril = tex(52, (g, r) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, y < 4 ? (r() < 0.5 ? '#8ff7f2' : '#2ad1d1') : r() < 0.5 ? '#1b9a9e' : '#147a80'); });
+
+// melon
+T.melonSide = tex(53, (g, r) => {
+  for (let x = 0; x < 16; x++) {
+    const stripe = [2, 1, 0, 1, 2, 2, 1, 0][x % 8];
+    for (let y = 0; y < 16; y++) px(g, x, y, ['#3a6b18', '#4c8521', '#62a02c', '#78b63a'][Math.max(0, Math.min(3, stripe + (r() < 0.18 ? 1 : r() < 0.12 ? -1 : 0)))]);
+  }
+});
+T.melonTop = tex(54, (g, r) => {
+  organic(g, r, ['#3a6b18', '#4c8521', '#62a02c', '#78b63a'], { jitter: 1.3, bias: 2 });
+  border(g, '#4c8521'); rect(g, 6, 6, 4, 4, '#3a6b18'); rect(g, 7, 7, 2, 2, '#6b4a22');
+});
+
+// brewing stand
+T.standBase = tex(55, (g, r) => cobble(g, r, COBBLE, '#4a4a4a', { cells: 6 }));
+T.rod = tex(56, (g, r) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(g, x, y, r() < 0.5 ? '#4a3622' : '#5e4630'); });
+function bottle(seed, liquid) {
+  return tex(seed, (g, r) => {
+    rect(g, 0, 0, 16, 16, 'rgba(210,240,255,0.22)');
+    border(g, 'rgba(230,250,255,0.9)');
+    rect(g, 1, 8, 14, 7, liquid); rect(g, 1, 8, 14, 1, 'rgba(255,255,255,0.5)');
+    rect(g, 6, 0, 4, 3, '#8a5a2b');
+  });
+}
+T.potionR = bottle(57, '#d9416e');
+T.potionB = bottle(58, '#3f8fef');
+T.potionP = bottle(59, '#8a4fd1');
+
+// amethyst
+const AMETH = ['#4a2a80', '#5f3a9e', '#7449b8', '#8a5ccb', '#a47ddf', '#c4a6f2'];
+T.amethyst = tex(60, (g, r) => {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const d = ((x + y * 2) % 9) / 9;
+    let i = Math.round(1.5 + d * 3 + (r() - 0.5) * 1.6);
+    px(g, x, y, AMETH[Math.max(0, Math.min(5, i))]);
+  }
+  for (let k = 0; k < 6; k++) { const x = Math.floor(r() * 15), y = Math.floor(r() * 15); px(g, x, y, '#e2d1ff'); }
+});
+
+// bedrock (as before)
+T.bedrock = tex(7, (g, r) => organic(g, r, ['#1b1b1b', '#2c2c2c', '#3d3d3d', '#525252', '#666666', '#7d7d7d', '#959595'], { blots: 14, amp: 1.6, jitter: 1.6, bias: 2.6 }));
+
+// ---- models ------------------------------------------------------------------------------
+const cube = (top, left, right, extra = {}) => [{ b: [0, 0, 0, 16, 16, 16], top, left, right: right || left, ...extra }];
+const MODELS = {
+  grass: cube(T.grassTop, T.grassSide),
+  chest: [{ b: [1, 0, 1, 15, 14, 15], top: T.chestTop, left: T.chestFront, right: T.chestSide }],
+  ender_chest: [{ b: [1, 0, 1, 15, 14, 15], top: T.enderTop, left: T.enderFront, right: T.enderSide }],
+  barrel: cube(T.barrelTop, T.barrelSide),
+  shulker_box: cube(T.shulkTop, T.shulkSide),
+  crafting_table: cube(T.craftTop, T.craftFront, T.craftSide),
+  furnace: cube(T.furnaceTop, T.furnaceFront, T.cobble),
+  blast_furnace: cube(T.blastTop, T.blastFront, T.blastSide),
+  anvil: [
+    { b: [2, 0, 2, 14, 3, 14], top: T.anvil, left: T.anvil },
+    { b: [4, 3, 3, 12, 4, 13], top: T.anvil, left: T.anvil },
+    { b: [6, 4, 4, 10, 9, 12], top: T.anvil, left: T.anvil },
+    { b: [3, 9, 0, 13, 15, 16], top: T.anvilTop, left: T.anvil },
+  ],
+  enchanting_table: [
+    { b: [0, 0, 0, 16, 12, 16], top: T.enchTop, left: T.enchSide },
+    { b: [4, 13, 5, 12, 14, 11], top: T.bookTop, left: T.bookSide },
+  ],
+  beacon: [
+    { b: [2, 0, 2, 14, 3, 14], top: T.obsid, left: T.obsid },
+    { b: [5, 3, 5, 11, 11, 11], top: T.core, left: T.core, noShade: 0.45 },
+    { b: [0, 0, 0, 16, 16, 16], top: T.glass, left: T.glass, glass: true },
+  ],
+  sticky_piston: cube(T.pistonTop, T.pistonSide),
+  slime_block: [
+    { b: [3, 3, 3, 13, 13, 13], top: T.slimeInner, left: T.slimeInner },
+    { b: [0, 0, 0, 16, 16, 16], top: T.slimeOuter, left: T.slimeOuter, glass: true },
+  ],
+  hay_bale: cube(T.hayTop, T.haySide),
+  tnt: cube(T.tntTop, T.tntSide),
+  cake: [{ b: [1, 0, 1, 15, 8, 15], top: T.cakeTop, left: T.cakeSide }],
+  diamond_ore: cube(T.diamondOre, T.diamondOre),
+  emerald_ore: cube(T.emeraldOre, T.emeraldOre),
+  bee_nest: cube(T.nestTop, T.nestFront, T.nestSide),
+  sculk: cube(T.sculk, T.sculk),
+  sculk_sensor: [
+    { b: [0, 0, 0, 16, 8, 16], top: T.sensorTop, left: T.sensorSide },
+    { b: [12, 8, 12, 14, 15, 14], top: T.tendril, left: T.tendril },
+    { b: [2, 8, 12, 4, 13, 14], top: T.tendril, left: T.tendril },
+    { b: [12, 8, 2, 14, 13, 4], top: T.tendril, left: T.tendril },
+    { b: [3, 8, 3, 5, 15, 5], top: T.tendril, left: T.tendril },
+  ],
+  melon: cube(T.melonTop, T.melonSide),
+  brewing_stand: [
+    { b: [1, 0, 1, 15, 2, 15], top: T.standBase, left: T.standBase },
+    { b: [10, 2, 10, 14, 9, 14], top: T.potionP, left: T.potionP, glass: true },
+    { b: [7, 2, 7, 9, 14, 9], top: T.rod, left: T.rod },
+    { b: [6, 14, 6, 10, 15, 10], top: T.rod, left: T.rod },
+    { b: [10, 2, 2, 14, 9, 6], top: T.potionB, left: T.potionB, glass: true },
+    { b: [2, 2, 10, 6, 9, 14], top: T.potionR, left: T.potionR, glass: true },
+  ],
+  amethyst_block: cube(T.amethyst, T.amethyst),
+  bedrock: cube(T.bedrock, T.bedrock),
+};
+
+// a texture's opaque pixels in one colour: the face shading, through the texture's alpha
+const shades = new Map();
+function shadeOf(img, col) {
+  const key = img;
+  if (!shades.has(key)) shades.set(key, new Map());
+  const m = shades.get(key);
+  if (!m.has(col)) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    const cg = c.getContext('2d');
+    cg.drawImage(img, 0, 0);
+    cg.globalCompositeOperation = 'source-in';
+    cg.fillStyle = col;
+    cg.fillRect(0, 0, 16, 16);
+    m.set(col, c);
+  }
+  return m.get(col);
+}
+
+// ---- isometric renderer ---------------------------------------------------------------------
+// screen(x,y,z): x toward the right corner, z toward the left corner, y up.
+const SX = 8.5, SY = 4.25, SH = 9.5, OX = 150, OY = 142;
+function render(model) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 300;
+  const g = cv.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  // bottom layers first, far boxes before near ones; glass shells last
+  const depth = (x) => (x.b[0] + x.b[2] + x.b[3] + x.b[5]) / 2;
+  const boxes = [...model].sort((a, b) => (a.glass ? 1 : 0) - (b.glass ? 1 : 0) || a.b[1] - b.b[1] || depth(b) - depth(a));
+  for (const box of boxes) {
+    const [x0, y0, z0, x1, y1, z1] = box.b;
+    const face = (img, a, b, c, d, e, f, u0, v0, u1, v1) => {
+      const draw = (src) => {
+        g.save();
+        g.setTransform(a, b, c, d, e, f);
+        g.imageSmoothingEnabled = false;
+        g.filter = 'brightness(1.12) saturate(1.08)';
+        g.drawImage(src, u0, v0, u1 - u0, v1 - v0, u0 - 0.02, v0 - 0.02, u1 - u0 + 0.04, v1 - v0 + 0.04);
+        g.restore();
+      };
+      draw(img);
+    };
+    // right face: z = z0, u = x, v = 16 - y
+    face(box.right || box.left, SX, -SY, 0, SH, OX - SX * z0, OY - SY * z0, x0, 16 - y1, x1, 16 - y0);
+    // left face: x = x0, u = 16 - z, v = 16 - y
+    face(box.left, SX, SY, 0, SH, OX - SX * 16 + SX * x0, OY - SY * 16 - SY * x0, 16 - z1, 16 - y1, 16 - z0, 16 - y0);
+    // top: y = y1, u = x, v = 16 - z
+    face(box.top, SX, -SY, SX, SY, OX - SX * 16, OY - SY * 16 + SH * (16 - y1), x0, 16 - z1, x1, 16 - z0);
+  }
+  return cv;
+}
+
+// ---- pixel renderer ---------------------------------------------------------------------------
+// The same boxes drawn straight at 32x36: one screen pixel per texel
+// column, every pixel sampled from the texture without smoothing, faces
+// lit top > left > right. Shown at 1x or 2x, they stay crisp.
+const pixelCache = new Map();
+function texels(img) {
+  if (!pixelCache.has(img)) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 16;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    pixelCache.set(img, g.getImageData(0, 0, 16, 16).data);
+  }
+  return pixelCache.get(img);
+}
+function renderPixel(model, { light = [1.08, 0.86, 0.7], gamma = 1 } = {}) {
+  // 32 wide, the top a 2:1 diamond; 16 texels of height become 20 pixels
+  // (Minecraft's own inventory cube is 0.61 as tall in the sides as wide)
+  const W = 32, K = 1.25, H = 16 + 16 * K;
+  const cv = document.createElement('canvas');
+  cv.width = W;
+  cv.height = H;
+  const g = cv.getContext('2d');
+  const out = g.createImageData(W, H);
+  const d = out.data;
+  const depth = (x) => (x.b[0] + x.b[2] + x.b[3] + x.b[5]) / 2;
+  const boxes = [...model].sort((a, b) => (a.glass ? 1 : 0) - (b.glass ? 1 : 0) || a.b[1] - b.b[1] || depth(b) - depth(a));
+  for (const box of boxes) {
+    const [x0, y0, z0, x1, y1, z1] = box.b;
+    const k = box.noShade != null ? box.noShade : 1;
+    // screen: sx = 16 + x − z, sy = H − (x + z)/2 − K·y  (x right, z left, y up).
+    // Sides: one texel column per pixel column; texel rows counted down from
+    // the face's top edge in each column, so every row keeps one height.
+    const side = (sy, top) => {
+      const first = Math.ceil(top - 0.5);
+      return 16 - y1 + Math.min(y1 - y0 - 1, Math.floor((Math.floor(sy) - first + 0.5) / K));
+    };
+    const faces = [
+      { img: box.top, light: light[0], uv: (sx, sy) => { const s = H - sy - K * y1; return [(sx - 16) / 2 + s, 16 - (s - (sx - 16) / 2)]; }, ok: (u, v) => u >= x0 && u < x1 && v >= 16 - z1 && v < 16 - z0 },
+      { img: box.left, light: 1 - (1 - light[1]) * k, uv: (sx, sy) => { const u = sx - x0; const top = H - (x0 + 16 - u) / 2 - K * y1; return [u, sy >= top && sy < top + K * (y1 - y0) ? side(sy, top) : -1]; }, ok: (u, v) => u > 16 - z1 && u <= 16 - z0 && v >= 0 },
+      { img: box.right || box.left, light: 1 - (1 - light[2]) * k, uv: (sx, sy) => { const u = sx - 16 + z0; const top = H - (u + z0) / 2 - K * y1; return [u, sy >= top && sy < top + K * (y1 - y0) ? side(sy, top) : -1]; }, ok: (u, v) => u >= x0 && u < x1 && v >= 0 },
+    ];
+    for (let py = 0; py < H; py++) for (let px = 0; px < W; px++) {
+      const sx = px + 0.5, sy = py + 0.5;
+      for (const f of faces) {
+        const [u, v] = f.uv(sx, sy);
+        if (!f.ok(u, v)) continue;
+        const t = texels(f.img);
+        const tx = Math.max(0, Math.min(15, Math.floor(u))), ty = Math.max(0, Math.min(15, Math.floor(v)));
+        const i = (ty * 16 + tx) * 4;
+        const a = t[i + 3] / 255;
+        if (a > 0) {
+          const o = (py * W + px) * 4;
+          const oa = d[o + 3] / 255;
+          const na = a + oa * (1 - a);
+          for (let c = 0; c < 3; c++) {
+            const src = 255 * Math.pow(Math.min(255, t[i + c] * f.light) / 255, gamma);
+            d[o + c] = Math.round((src * a + d[o + c] * oa * (1 - a)) / (na || 1));
+          }
+          d[o + 3] = Math.round(na * 255);
+        }
+        break;
+      }
+    }
+  }
+  g.putImageData(out, 0, 0);
+  return cv;
+}
+
+window.__pngs = {};
+// ?px: the 32x32 pixel icons the launcher shows; without it, the big renders
+const PX = new URLSearchParams(location.search).has('px');
+addEventListener('load', async () => {
+  const images = {};
+  await Promise.all(Object.entries(window.VANILLA_TEXTURES).map(async ([key, url]) => {
+    const img = new Image(); img.src = url; await img.decode(); images[key] = img;
+    if (!T[key]) return;
+    const g = T[key].getContext('2d'); g.clearRect(0, 0, 16, 16);
+    g.drawImage(img, 0, 0, 16, 16, 0, 0, 16, 16);
+  }));
+  const tint = (canvas) => {
+    const g = canvas.getContext('2d'); g.globalCompositeOperation = 'multiply'; g.fillStyle = '#91bd59'; g.fillRect(0,0,16,16); g.globalCompositeOperation = 'destination-in'; g.drawImage(images.grassTop,0,0); g.globalCompositeOperation = 'source-over';
+  };
+  tint(T.grassTop);
+  const overlay = document.createElement('canvas'); overlay.width = overlay.height = 16;
+  const og = overlay.getContext('2d'); og.drawImage(images.grassOverlay,0,0); og.globalCompositeOperation='source-in'; og.fillStyle='#72a944'; og.fillRect(0,0,16,16); T.grassSide.getContext('2d').drawImage(overlay,0,0);
+  for (const [prefix, image] of [['chest', images.normal], ['ender', images.ender]]) {
+    for (const side of ['Top','Front','Side']) {
+      const g=T[prefix+side].getContext('2d');g.clearRect(0,0,16,16);
+      if(side==='Top')g.drawImage(image,14,0,14,14,1,1,14,14);
+      else { const u=side==='Front'?14:0; g.drawImage(image,u,14,14,5,1,2,14,5);g.drawImage(image,u,33,14,10,1,7,14,9);if(side==='Front')g.drawImage(image,1,1,2,4,7,5,2,4); }
+    }
+  }
+  for (const [id, model] of Object.entries(MODELS)) {
+    if (['chest', 'ender_chest', 'enchanting_table', 'beacon', 'sculk_sensor', 'brewing_stand'].includes(id)) continue;
+    // dark materials get more light (and sculk its shadows lifted), or they
+    // vanish on a dark UI
+    const tune = { anvil: { light: [1.45, 1.18, 0.98] }, sculk: { light: [1.3, 1.05, 0.88], gamma: 0.6 } }[id];
+    const cv = PX ? renderPixel(model, tune) : render(model);
+    const url = cv.toDataURL('image/png');
+    window.__pngs[id] = url;
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const img = new Image();
+    img.src = url;
+    if (PX) img.style.imageRendering = 'pixelated';
+    cell.append(img, Object.assign(document.createElement('span'), { textContent: id }));
+    document.body.appendChild(cell);
+  }
+  document.title = 'done';
+});
+</script>

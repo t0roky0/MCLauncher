@@ -1,0 +1,105 @@
+{
+  "name": "mc-launcher",
+  "productName": "MC Launcher",
+  "version": "2.1.20-beta.28",
+  "description": "MC Launcher — Minecraft Java & Bedrock",
+  "main": "src/main/index.js",
+  "author": "MC Launcher",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "build:native": "node scripts/build-native.mjs",
+    "build:bedrock": "node scripts/build-bedrock.cjs",
+    "build:recorder": "node scripts/build-recorder.cjs",
+    "build:ui": "node scripts/build-ui.mjs",
+    "build": "node scripts/build-native.mjs && node scripts/build-bedrock.cjs && node scripts/build-recorder.cjs && node scripts/build-ui.mjs --prod",
+    "start": "node scripts/build-ui.mjs && electron .",
+    "dist": "node scripts/build-native.mjs && node scripts/build-bedrock.cjs && node scripts/build-recorder.cjs && node scripts/build-ui.mjs --prod && electron-builder --win nsis --publish never",
+    "build:agent": "node scripts/build-agent.mjs",
+    "test": "node --test scripts/tests/*.test.cjs",
+    "release": "node scripts/release.cjs"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "electron-updater": "6.8.9"
+  },
+  "devDependencies": {
+    "@sapphi-red/web-noise-suppressor": "0.4.1",
+    "cmake-js": "^8.0.0",
+    "electron": "44.5.0",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "node-addon-api": "^8.5.0",
+    "skinview3d": "^3.4.2"
+  },
+  "build": {
+    "appId": "com.mclauncher.app",
+    "productName": "MC Launcher",
+    "copyright": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "package.json",
+      "src/main/**",
+      "src/preload/**",
+      "dist/**",
+      "assets/**",
+      "native/build/Release/mcnative.node",
+      "!**/*.map"
+    ],
+    "asarUnpack": [
+      "native/build/Release/*.node"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "MCLauncher-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "MC Launcher",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "runAfterFinish": true
+    },
+    "protocols": [
+      {
+        "name": "MC Launcher",
+        "schemes": [
+          "mclauncher"
+        ]
+      }
+    ],
+    "npmRebuild": false,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://relay.example.com:8080/"
+      }
+    ],
+    "detectUpdateChannel": false
+  }
+}

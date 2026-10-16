@@ -1,1 +1,11 @@
-.claude/
+node_modules/
+dist/
+release/
+native/build/
+bedrock-native/build/
+recorder-native/build/
+agent/out/
+*.log
+*.pfx
+*.pem
+.env
