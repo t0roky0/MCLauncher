@@ -1174,6 +1174,51 @@ textarea.input { height: auto; min-height: 76px; padding: 10px 12px; resize: ver
 .shop-empty { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; color: var(--text-2); }
 @media (prefers-reduced-motion: reduce) { .shop-feature::before { animation: none; } }
 
+/* the showcase on top: what's chosen, big; the old blocks' look, one at a time */
+.shop-body { display: flex; flex-direction: column; gap: 14px; }
+.shop-hero { flex: none; min-height: 290px; grid-template-columns: minmax(0, 1fr) minmax(220px, 42%); }
+.shop-hero[hidden] { display: none; }
+.shop-hero .shop-feature-text { padding: 22px 0 18px 24px; max-width: 560px; }
+.shop-hero .shop-feature-title { font-size: 38px; line-height: 40px; }
+.shop-hero .shop-feature-sub { font-size: 14px; line-height: 19px; max-width: 46ch; }
+.shop-hero-from { font-size: 12px; color: color-mix(in srgb, var(--ev) 50%, #fff); }
+/* the kinds: all · packs · head · back · pets, each with how many */
+.shop-tabs { flex: none; display: flex; gap: 4px; padding: 3px; background: #171615; border: 2px solid var(--line-2); width: max-content; max-width: 100%; overflow-x: auto; }
+.shop-tabs:empty { display: none; }
+.shop-tab { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; background: transparent; color: var(--dim); font: 16px/16px var(--font-px2); cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+.shop-tab:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.shop-tab.active { color: var(--on-acc); background: var(--acc); text-shadow: 2px 2px 0 var(--on-acc-shadow); }
+.shop-tab:disabled { opacity: 0.4; cursor: default; }
+.shop-tab-n { min-width: 18px; height: 18px; padding: 0 5px; display: grid; place-items: center; font-size: 11px; line-height: 11px; color: var(--text-2); background: rgba(0, 0, 0, 0.3); text-shadow: none; }
+.shop-tab.active .shop-tab-n { color: var(--on-acc); background: rgba(0, 0, 0, 0.18); }
+
+/* everything there is, as tiles: its picture on its pack's colour, its name, its price */
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 12px; }
+.shop-tile { --ev: var(--acc); --r: #a9a49e; position: relative; display: flex; flex-direction: column; align-items: stretch; min-width: 0; padding: 0 12px 12px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ev) 9%, #1d1c1b), #1b1a19 55%); border: 2px solid color-mix(in srgb, var(--ev) 26%, #34312e); border-top: 3px solid color-mix(in srgb, var(--r) 70%, #34312e);
+  transition: transform 0.18s var(--ease), border-color 0.18s, box-shadow 0.25s var(--ease); }
+.shop-tile.r-rare { --r: #6cb6ef; }
+.shop-tile.r-epic { --r: #b48cf0; }
+.shop-tile.r-legendary { --r: #ecb84f; }
+.shop-tile:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--ev) 60%, #4a4642); border-top-color: var(--r); box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--ev) 80%, transparent); }
+.shop-tile.on { border-color: color-mix(in srgb, var(--ev) 85%, #fff); border-top-color: var(--r); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ev) 35%, transparent), 0 0 26px -6px color-mix(in srgb, var(--ev) 75%, transparent); }
+.shop-tile:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.shop-tile-art { position: relative; height: 128px; margin: 0 -12px 10px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--ev) 34%, transparent), transparent 88%), #141312; }
+.shop-tile-art img { width: 96px; height: 96px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45)); transition: transform 0.3s var(--ease); }
+.shop-tile-art.two img { width: 78px; height: 78px; margin-top: -14px; }
+.shop-tile-art.two img + img { margin: 30px 0 0 -18px; }
+.shop-tile:hover .shop-tile-art img { transform: translateY(-4px) scale(1.04); }
+.shop-tile.owned .shop-tile-art img { opacity: 0.8; }
+.shop-tile-new { position: absolute; top: 8px; right: 8px; z-index: 1; padding: 3px 7px 2px; font: 12px/13px var(--font-px2); color: #fff; background: color-mix(in srgb, var(--ev) 70%, #000); border: 2px solid color-mix(in srgb, var(--ev) 80%, #fff); }
+.shop-tile-kicker { font-size: 10px; line-height: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--ev) 55%, #fff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-tile-name { margin-top: 4px; font: 19px/20px var(--font-px2); color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-tile-from { margin-top: 3px; font-size: 11px; line-height: 14px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shop-tile-price, .shop-tile-owned { display: flex; align-items: center; gap: 6px; margin-top: 10px; height: 22px; }
+.shop-tile-price b { font: 18px/18px var(--font-px2); color: #ffd25e; text-shadow: 2px 2px 0 #5a3a06; }
+.shop-tile-owned { font: 14px/14px var(--font-px2); color: var(--good); }
+@media (prefers-reduced-motion: reduce) { .shop-tile, .shop-tile-art img { transition: none; } .shop-tile:hover { transform: none; } }
+
 /* the fixer (the bug by the console): a line a problem, its fix on the right */
 .fx-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .fx-top .segmented { flex: 1; }

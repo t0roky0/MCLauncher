@@ -1,6 +1,9 @@
-// The shop: packs of cosmetics for coins, each a block of its own side by
-// side (in the event's style: the pack's colour round it, the player wearing
-// it, turning slowly; what's in the pack, as cards; its price and "Buy").
+// The shop: a showcase on top — what's chosen, in the colour of its pack: the
+// player wearing it (a pet on its own), turning; its little story, what's in
+// it, its price and "Buy" — and under it everything there is, by kind (all ·
+// packs · on the head · on the back · pets), as tiles: a click puts one in the
+// showcase. A hat or wings come in a pack: the pack is what's bought. Only
+// what's sold is here (the event's things are on the Skins page, with their quests).
 // Coins and purchases are our server's (src/main/shop.js): what it says is
 // shown, a purchase goes through it; coins are paid for with YooKassa (the
 // page opens in the browser, main.js says when it's done).
@@ -16,8 +19,10 @@ const local = (o) => (o && typeof o === 'object' ? (getLang() === 'en' ? o.en : 
 const named = (x) => (getLang() === 'en' ? x.nameEn || x.name : x.name);
 const num = (n) => Math.floor(n).toLocaleString(getLang() === 'en' ? 'en-US' : 'ru-RU');
 const iconUrl = (id) => `mcl://app/assets/cosmetics/${id}/icon.png`;
+const TABS = ['all', 'packs', 'head', 'back', 'pets'];
+const RANK = { legendary: 0, epic: 1, rare: 2, common: 3 };
 
-// the coin (assets/images/coin.png, the user's 8×8 pixel art) at a whole multiple: 3 → 24 px, 4 → 32 px
+// the coin (assets/images/coin.png, the user's 8×8 pixel art) at a whole multiple: 2 → 16 px, 3 → 24 px, 4 → 32 px
 const coin = (times = 3) => h('img.coin', { src: 'mcl://app/assets/images/coin.png', alt: '', draggable: false, style: { width: `${times * 8}px`, height: `${times * 8}px` } });
 const price = (n) => h('div.shop-price', coin(3), h('b', num(n)));
 
@@ -34,8 +39,10 @@ function frame(v, bottom, top, aspect = v.camera.aspect) {
 
 export function mount(root) {
   const life = bag();
-  let state = null;
+  let state = null; // the shop's: coins, packs
   let busy = false;
+  let tab = 'all';
+  let chosen = ''; // the showcase's entry (its key)
 
   const balance = h('b.shop-coins', '—');
   const wallet = h(
@@ -45,12 +52,14 @@ export function mount(root) {
     balance,
     button(t('shop.topUp'), { icon: 'plus', cls: 'btn-sm shop-topup', onClick: topUp }),
   );
-  const list = h('div.shop-list');
-  const body = h('div.page-body', list);
+  const heroText = h('div.shop-feature-text');
+  const hero = h('div.shop-feature.shop-hero', heroText);
+  const tabs = h('div.shop-tabs', { role: 'tablist' });
+  const grid = h('div.shop-grid');
+  const body = h('div.page-body.shop-body', hero, tabs, grid);
   root.append(h('div.page-head', h('div.page-title', t('shop.title')), h('div.grow'), wallet), body);
 
-  // a payment done (main.js tells about it): the page as it is now
-  // another account signed in: its coins and purchases
+  // a payment done (main.js tells about it), another account signed in: as it is now
   life.add(onEvent('shop:changed', (st) => {
     if (st) {
       state = st;
@@ -64,12 +73,34 @@ export function mount(root) {
     }
   }));
 
-  // ---- a pack's block: made once (its figure keeps turning), filled on every render ----
-  const blocks = new Map(); // pack id → { el, text, stage }
+  // ---- what there is: the packs (a pet's pack is the pet), and the packs' things by themselves ----
+  function entries() {
+    const out = [];
+    for (const p of (state && state.packs) || []) {
+      const items = p.items || [];
+      const pet = items.length > 0 && items.every((i) => i.slot === 'pet');
+      out.push({ key: `pack:${p.id}`, kind: pet ? 'pet' : 'pack', pack: p, items, owned: !!p.owned, color: p.color, featured: !!p.featured });
+      if (!pet) for (const i of items) out.push({ key: `item:${i.id}`, kind: i.slot, item: i, pack: p, items: [i], owned: !!p.owned, color: p.color, part: true });
+    }
+    return out;
+  }
+  // a tab's: "all" is what's to be had (a pack, not its things again)
+  const inTab = (e, which) => (which === 'all' ? !e.part : which === 'packs' ? e.kind === 'pack' : which === 'pets' ? e.kind === 'pet' : e.kind === which);
+  // the new first, then what's to be bought, what's got; the rarer first
+  const order = (e) => (e.featured ? 0 : 10) + (e.owned ? 40 : 0) + (RANK[(e.item || e.items[0] || {}).rarity] ?? 3);
+  const rarity = (e) => (e.item || e.items[0] || {}).rarity || 'common';
+  const title = (e) => (e.part ? named(e.item) : named(e.pack));
+  const kind = (e) => (e.kind === 'pack' ? t('shop.pack') : t(`cos.slot.${e.kind}`));
+
+  // ---- the showcase's figure: one at a time, made again for what's chosen ----
+  let shown = null; // { stage, ro, sig, ... }
   let look = null; // the player's skin, asked for once
-  function block(pack) {
-    let b = blocks.get(pack.id);
-    if (b) return b;
+  function figure(e) {
+    const pet = e.kind === 'pet';
+    const ids = e.items.map((i) => i.id);
+    const sig = `${pet ? 'pet' : 'wear'}:${ids.join(',')}`;
+    if (shown && shown.sig === sig) return;
+    dropFigure();
     // the picture (shop-view) twice as wide as its column, under the text,
     // the mouse through it — wings, a pet turning round, aren't cut off at
     // the column's edges; the column (shop-stage) is where it's turned
@@ -77,8 +108,6 @@ export function mount(root) {
     const view = h('div.shop-view', canvas);
     const stageBox = h('div.shop-stage', h('div.shop-stage-wait', spinner('lg')));
     const stage = new SkinStage(canvas, { width: 260, height: 340, hit: stageBox });
-    // a pet's pack: the pet alone, to look at from every side
-    const pet = (pack.items || []).length > 0 && pack.items.every((i) => i.slot === 'pet');
     stage.setAutoRotate(!pet);
     stage.viewer.autoRotateSpeed = 0.6;
     // Held by the mouse: it stands still (turning it by itself while the
@@ -96,81 +125,133 @@ export function mount(root) {
       const c = stageBox.getBoundingClientRect();
       return c.width > 10 && c.height > 10 ? c.width / c.height : 0.75;
     };
-    if (!pet) frame(stage.viewer, -11, 27, columnAspect());
-    const ro = new ResizeObserver(() => {
+    const me = { stage, sig, takeControl, giveBack, fitted: false, ro: null };
+    me.ro = new ResizeObserver(() => {
       const r = view.getBoundingClientRect();
       if (r.width > 10 && r.height > 10) {
         stage.resize(Math.round(r.width), Math.round(r.height));
-        // Fit once when laid out; preserve the user's zoom on later updates.
-        if (!b.fitted) {
+        // Fit once when laid out; the player's own zoom is kept after that.
+        if (!me.fitted) {
           stage.fitAspect = columnAspect();
           if (pet) stage.frameShowcase(); else frame(stage.viewer, -11, 27, stage.fitAspect);
-          b.fitted = true;
+          me.fitted = true;
         }
       }
     });
-    ro.observe(view);
-    const text = h('div.shop-feature-text');
-    b = { el: h('div.shop-feature', view, text, stageBox), text, stage, ro, takeControl, giveBack, fitted: false };
-    blocks.set(pack.id, b);
+    me.ro.observe(view);
+    hero.replaceChildren(view, heroText, stageBox);
+    shown = me;
     if (!look) {
       const cfg = store.get('config') || {};
       const account = (cfg.accounts || []).find((a) => a.id === cfg.activeAccount) || (cfg.accounts || [])[0];
       look = currentAppearance(account);
     }
     look
-      .then((l) => stage.setSkin(l.url, l.model))
-      .then(() => (pet ? stage.showcase(pack.items.map((i) => i.id)) : stage.setCosmetics(pack.items.map((i) => i.id))))
+      .then((l) => (shown === me ? stage.setSkin(l.url, l.model) : null))
+      .then(() => (shown === me ? (pet ? stage.showcase(ids) : stage.setCosmetics(ids)) : null))
       .then(() => stageBox.classList.add('ready'))
       .catch(() => {});
-    return b;
   }
-  function drop(id) {
-    const b = blocks.get(id);
-    b.ro.disconnect();
-    b.stage.viewer.controls.removeEventListener('start', b.takeControl);
-    b.stage.viewer.controls.removeEventListener('end', b.giveBack);
-    b.stage.dispose();
-    blocks.delete(id);
+  function dropFigure() {
+    if (!shown) return;
+    shown.ro.disconnect();
+    shown.stage.viewer.controls.removeEventListener('start', shown.takeControl);
+    shown.stage.viewer.controls.removeEventListener('end', shown.giveBack);
+    shown.stage.dispose();
+    shown = null;
   }
-  life.add(() => [...blocks.keys()].forEach(drop));
+  life.add(dropFigure);
+
+  // ---- the showcase's words: what it is, its story, what's in it, its price ----
+  function showcase(e) {
+    hero.style.setProperty('--ev', e.color || 'var(--acc)');
+    const kicker = [e.featured ? t('shop.featured') : null, kind(e)].filter(Boolean).join(' · ');
+    const story = local(e.pack.tagline);
+    // a pack's things (a thing of a pack: the pack's, this one marked)
+    const set = e.pack && e.pack.items.length > 1
+      ? h('div.shop-feature-items', e.pack.items.map((i) => h(
+        'div.cos-card.shop-card',
+        { class: `r-${i.rarity}${e.part && i.id === e.item.id ? ' worn' : ''}` },
+        h('div.cos-art', h('img', { src: iconUrl(i.id), alt: '', draggable: false })),
+        h('div.cos-name', { title: named(i) }, named(i)),
+        h('div.cos-tags', h('span.cos-rarity', t(`cos.rarity.${i.rarity}`)), h('span.cos-dot', '·'), h('span.cos-slot', t(`cos.slot.${i.slot}`))),
+      )))
+      : null;
+    const how = e.owned
+      ? h('div.shop-owned', icon('check'), t('shop.owned'))
+      : [price(e.pack.price), button(e.part ? t('shop.buyPack') : t('shop.buy'), { variant: 'primary', icon: 'shop', cls: 'shop-buy', disabled: busy, onClick: () => purchase(e.pack) })];
+    swap(
+      heroText,
+      h('div.cos-ev-kicker', kicker),
+      h('div.shop-feature-title', title(e)),
+      e.part ? h('div.shop-hero-from', t('shop.inPack', { name: named(e.pack) })) : null,
+      h('div.shop-feature-sub', story),
+      set,
+      h('div.shop-feature-buy', how),
+    );
+    figure(e);
+  }
+
+  // ---- a tile: its picture on its colour, its name, its price ----
+  function tile(e) {
+    const art = h('div.shop-tile-art', { class: e.items.length > 1 ? 'two' : '' }, e.items.slice(0, 2).map((i) => h('img', { src: iconUrl(i.id), alt: '', draggable: false })));
+    const foot = e.owned
+      ? h('div.shop-tile-owned', icon('check'), t('shop.owned'))
+      : h('div.shop-tile-price', coin(2), h('b', num(e.pack.price)));
+    const el = h(
+      'button.shop-tile',
+      { type: 'button', class: `r-${rarity(e)}${e.owned ? ' owned' : ''}${e.key === chosen ? ' on' : ''}`, dataset: { key: e.key }, onclick: () => choose(e.key, true) },
+      e.featured && !e.owned ? h('span.shop-tile-new', t('shop.featured')) : null,
+      art,
+      h('div.shop-tile-kicker', kind(e)),
+      h('div.shop-tile-name', { title: title(e) }, title(e)),
+      e.part ? h('div.shop-tile-from', t('shop.inPack', { name: named(e.pack) })) : h('div.shop-tile-from', t(`cos.rarity.${rarity(e)}`)),
+      foot,
+    );
+    el.style.setProperty('--ev', e.color || 'var(--acc)');
+    return el;
+  }
+
+  function choose(key, scroll) {
+    const e = entries().find((x) => x.key === key);
+    if (!e) return;
+    chosen = key;
+    showcase(e);
+    for (const el of grid.children) el.classList.toggle('on', el.dataset && el.dataset.key === key);
+    if (scroll) body.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   // ---- what's drawn ------------------------------------------------------------
   function render() {
     balance.textContent = state && state.coins != null ? num(state.coins) : '—';
     wallet.classList.toggle('offline', !!state && !state.online);
-    const packs = (state && state.packs) || [];
-    for (const id of [...blocks.keys()]) if (!packs.some((p) => p.id === id)) drop(id);
-    if (!packs.length) {
-      swap(list, h('div.shop-empty', icon('shop'), t('shop.empty')));
+    const all = entries();
+    if (!all.length) {
+      dropFigure();
+      hero.hidden = true;
+      swap(tabs);
+      swap(grid, h('div.shop-empty', icon('shop'), t('shop.empty')));
       return;
     }
-    const elements = packs.map((pack) => {
-      const b = block(pack);
-      // the pack's own colour round its block (the button stays the launcher's)
-      if (pack.color) b.el.style.setProperty('--ev', pack.color);
-      const buy = pack.owned
-        ? h('div.shop-owned', icon('check'), t('shop.owned'))
-        : button(t('shop.buy'), { variant: 'primary', icon: 'shop', cls: 'shop-buy', disabled: busy, onClick: () => purchase(pack) });
-      swap(
-        b.text,
-        h('div.cos-ev-kicker', pack.featured ? t('shop.featured') : t('shop.pack')),
-        h('div.shop-feature-title', named(pack)),
-        h('div.shop-feature-sub', local(pack.tagline)),
-        // what's in the pack: the Skins page's cards, in the block itself
-        h('div.shop-feature-items', pack.items.map((i) => h(
-          'div.cos-card.shop-card',
-          { class: `r-${i.rarity}` },
-          h('div.cos-art', h('img', { src: iconUrl(i.id), alt: '', draggable: false })),
-          h('div.cos-name', { title: named(i) }, named(i)),
-          h('div.cos-tags', h('span.cos-rarity', t(`cos.rarity.${i.rarity}`)), h('span.cos-dot', '·'), h('span.cos-slot', t(`cos.slot.${i.slot}`))),
-        ))),
-        h('div.shop-feature-buy', pack.owned ? null : price(pack.price), buy),
-      );
-      return b.el;
-    });
-    // Wallet refreshes must not detach a canvas during a captured drag.
-    if (elements.length !== list.children.length || elements.some((el, i) => list.children[i] !== el)) swap(list, elements);
+    hero.hidden = false;
+    // the tabs, each with how many things it has
+    swap(tabs, TABS.map((k) => {
+      const n = all.filter((e) => inTab(e, k)).length;
+      const pick = () => {
+        if (tab === k) return;
+        tab = k;
+        render();
+        // the tab's first in the showcase, unless what's there is in it already
+        const here = all.filter((e) => inTab(e, k)).sort((a, b) => order(a) - order(b));
+        if (here.length && !here.some((e) => e.key === chosen)) choose(here[0].key, false);
+      };
+      return h('button.shop-tab', { type: 'button', role: 'tab', class: k === tab ? 'active' : '', 'aria-selected': k === tab ? 'true' : 'false', disabled: !n, onclick: pick },
+        h('span', t(`shop.tab.${k}`)), h('span.shop-tab-n', String(n)));
+    }));
+    const shownHere = all.filter((e) => inTab(e, tab)).sort((a, b) => order(a) - order(b));
+    if (!all.some((e) => e.key === chosen)) chosen = (all.filter((e) => inTab(e, 'all')).sort((a, b) => order(a) - order(b))[0] || all[0]).key;
+    swap(grid, shownHere.map(tile));
+    showcase(all.find((e) => e.key === chosen));
   }
 
   async function load(fromServer) {

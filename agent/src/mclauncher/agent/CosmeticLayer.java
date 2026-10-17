@@ -367,17 +367,24 @@ public final class CosmeticLayer {
   }
 
   // ---- a pet following its player as a creature of its own ------------------------------------------
-  // Its spot by the shoulder, in the world, from the player's place and turn
-  // (the model's root: turned 180 - body yaw, flipped on x and y, 1.501 down).
-  // Free, not tied to it: while the player is close it stays where it is
-  // (only rising and sinking with the player); once the spot is more than
-  // LEASH away (or the player walks into it) it flies after it smoothly —
-  // walls are nothing to it — looking at the player as it goes, leaning in
-  // the wind of its own speed, and settles when it's back by the shoulder.
-  static final class Follow { double x, y, z; float yaw, wind; boolean going; long at, seen; }
-  private static final double LEASH = 1.6, SETTLED = 0.25, PERSONAL = 0.55;
+  // First put by the shoulder (the model's root: turned 180 - body yaw,
+  // flipped on x and y, 1.501 down), then free, anywhere by the player — no
+  // spot of its own to go back to: while the player is close it stays wherever
+  // it is; once the player is more than FAR off it flies after them smoothly —
+  // walls are nothing to it — easing into it, looking at them as it goes,
+  // leaning in the wind of its own speed, and stops KEEP away on the side it
+  // came from, a little off straight behind (ASIDE: clear of a camera
+  // behind the player); walked into (nearer than NEAR) it moves aside, out
+  // to the player's side it's on. Its height is its own through a jump or a crouch:
+  // it floats to the player's only once it's off by more than a jump (RISE)
+  // or by more than STEP for a while (stairs, a ledge) — all as in Bedrock.
+  static final class Follow { double x, y, z; float yaw, wind, hold, pace; boolean going, rising; long at, seen; }
+  private static final double FAR = 2.2, KEEP = 1.1, NEAR = 0.6, ASIDE = 1.2, RISE = 1.4, STEP = 0.6;
+  // a crouching player is drawn this much lower (AvatarRenderer.getRenderOffset): the pet isn't
+  private static final double CROUCH = 2 / 16.0;
   private static final Map<String, Follow> follows = new HashMap<String, Follow>();
-  private static Field stateX, stateY, stateZ, stateBody, stateIdOf;
+  private static Field stateX, stateY, stateZ, stateBody, stateIdOf, stateCrouching;
+  private static boolean noCrouching;
   private static long followsSwept;
 
   /** {x, y, z offset in the model's space; the turn about its middle (degrees); the wind 0…1}, or null. */
@@ -408,11 +415,26 @@ public final class CosmeticLayer {
       double dt = Math.min(0.1, (now - f.at) / 1e9);
       f.at = now;
       if (dt > 0) {
-        double away = Math.hypot(rx - f.x, rz - f.z), near = Math.hypot(f.x - px, f.z - pz);
-        if (away > LEASH || near < PERSONAL) f.going = true;
-        else if (away < SETTLED) f.going = false;
-        double k = f.going ? 1 - Math.exp(-dt * 3.8) : 0;
-        double mx = (rx - f.x) * k, my = (ry - f.y) * (1 - Math.exp(-dt * 5)), mz = (rz - f.z) * k;
+        double ox = f.x - px, oz = f.z - pz, d = Math.hypot(ox, oz);
+        if (d > FAR || d < NEAR) f.going = true;
+        else if (Math.abs(d - KEEP) < 0.12) f.going = false;
+        // where it goes: KEEP from the player on the side it's on (walked into: out to their left or right)
+        double b = Math.toRadians(body), lx = Math.cos(b), lz = Math.sin(b), ux, uz;
+        double side = ox * lx + oz * lz < 0 ? -1 : 1;
+        if (d < NEAR) { ux = lx * side; uz = lz * side; }
+        else {
+          // a little to the side of straight behind: clear of a camera behind the player
+          ux = ox / d + lx * side * ASIDE; uz = oz / d + lz * side * ASIDE;
+          double un = Math.hypot(ux, uz); ux /= un; uz /= un;
+        }
+        double tx = px + ux * KEEP, tz = pz + uz * KEEP;
+        f.pace += ((f.going ? 1 : 0) - f.pace) * (float) (1 - Math.exp(-dt * 6));
+        double k = f.going ? (1 - Math.exp(-dt * 3.8)) * f.pace : 0;
+        double h = Math.abs(ry - f.y);
+        f.hold = h > STEP ? f.hold + (float) dt : 0;
+        if (h > RISE || f.hold > 0.8f) f.rising = true;
+        else if (h < 0.05) f.rising = false;
+        double mx = (tx - f.x) * k, my = f.rising ? (ry - f.y) * (1 - Math.exp(-dt * 4)) : 0, mz = (tz - f.z) * k;
         f.x += mx; f.y += my; f.z += mz;
         float speed = (float) (Math.hypot(mx, mz) / dt);
         f.wind += (Math.min(1f, speed / 4f) - f.wind) * (float) (1 - Math.exp(-dt * 4));
@@ -426,12 +448,23 @@ public final class CosmeticLayer {
         followsSwept = now;
         follows.values().removeIf(x -> now - x.seen > 10_000_000_000L);
       }
-      // back into the model's space
-      double wx = f.x - px, wy = f.y - py, wz = f.z - pz;
+      // back into the model's space (a crouch moves that down: the pet stays up)
+      double wx = f.x - px, wy = f.y - py + (crouching(state) ? CROUCH : 0), wz = f.z - pz;
       double ix = wx * c - wz * s, iz = wx * s + wz * c;
       return new float[] {(float) (-ix - m.cx), (float) (1.501 - wy - m.cy), (float) (iz - m.cz), wrap(f.yaw - body), f.wind};
     } catch (Throwable e) {
       return null;
+    }
+  }
+
+  private static boolean crouching(Object state) {
+    if (noCrouching) return false;
+    try {
+      if (stateCrouching == null) stateCrouching = field(state.getClass(), "humanoidState.isCrouching", "isCrouching");
+      return stateCrouching.getBoolean(state);
+    } catch (Throwable e) {
+      noCrouching = true;
+      return false;
     }
   }
 

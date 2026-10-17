@@ -51,6 +51,13 @@ async function attach(game){
   if(stopped||session!==s)return;
   s.started=Date.now();publish({status:'waiting',packageVersion});
  }catch(e){
+  // our module is in the game already, from another folder (an earlier launch, or a
+  // launcher since restarted — say by an update): take it over there; it reads the
+  // session file every moment and goes on with the new token
+  if(/restart_game_for_module_update/.test(e.message)&&session===s){
+   const dir=moduleDir(game.pid);
+   if(dir){s.dir=dir;writeSession(s);s.started=Date.now();publish({status:'waiting',packageVersion});return;}
+  }
   // a game that has only just started may not let us in yet: again on the next look, a few times
   const again=/remote_system_module|open_process|load_timeout|module_not_loaded/.test(e.message)&&(retries.pid===game.pid?++retries.count:(retries={pid:game.pid,count:1}).count)<=5;
   if(again&&session===s)session=null;else s.failed=true;
@@ -124,13 +131,25 @@ function watch(game={},quiet){
    let r=null;try{r=JSON.parse(out.trim().split('\n').pop());}catch{}
    if(stopped)return;
    if(!r||!r.pid){publish({status:'idle'});return;}
-   if(r.error){publish({status:'error',reason:r.error});return;}
+   // in, or may be in: the module, once in, reads this launch's folder — its telemetry
+   // will say (a fresh attach would find "our" module from another folder and give up)
+   if(r.error&&!/module_not_loaded|load_timeout/.test(r.error)){publish({status:'error',reason:r.error});return;}
    s.pid=r.pid;s.started=Date.now();session=s;retries={pid:r.pid,count:0};
    publish({status:'waiting',packageVersion:game.packageVersion||''});
   });
   if(!quiet)publish({status:'loading',packageVersion:game.packageVersion||''});
  }catch(e){watcher=null;publish({status:'error',reason:e.message});}
  sweep(s&&s.dir);
+}
+// the folder of the module already in this game: the one whose telemetry is from it
+function moduleDir(pid){
+ try{
+  for(const n of fs.readdirSync(root)){
+   const dir=path.join(root,n);
+   try{const f=JSON.parse(fs.readFileSync(path.join(dir,'telemetry.json'),'utf8'));if(f&&f.pid===pid&&fs.existsSync(path.join(dir,'mcl-bedrock.dll')))return dir;}catch{}
+  }
+ }catch{}
+ return '';
 }
 // a game process that's still there
 function alive(pid){if(!pid)return false;try{process.kill(pid,0);return true;}catch(e){return e.code==='EPERM';}}

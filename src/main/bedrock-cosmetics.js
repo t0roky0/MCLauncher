@@ -237,46 +237,109 @@ const isPet = (id) => {
 };
 
 // A pet's motion, each frame, for every player wearing one (Molang: the
-// player's own variables; one expression, so its temps hold throughout). The
-// pet is a point in the world of its own: while the player is close it stays
-// (rising and sinking with the player only); once its spot by the left
-// shoulder is more than 1.6 blocks off (or the player walks into it) it flies
-// after the spot, looking at the player, and settles back by the shoulder.
-// The player's place smoothed (it steps each game tick, the picture moves
-// every frame); a jump of more than 8 blocks (a teleport): there at once.
+// player's own variables; one expression, so its temps hold throughout) — the
+// same as in Java (CosmeticLayer.follow). The pet is a point in the world of
+// its own, anywhere by the player — no spot of its own to go back to: while
+// the player is close it stays wherever it is; once the player is more than
+// FAR off it flies after them, looking at them, and stops KEEP away on the
+// side it's on, a little off straight behind (clear of a camera behind the
+// player); walked into (nearer than NEAR) it moves aside, out to the player's
+// side it's on. First placed by the left shoulder. A jump of more than 8
+// blocks (a teleport): there at once.
+// Kept as the pet's place FROM the player (v.mcl_ox/oy/oz, world axes,
+// blocks), moved back by the player's own motion — never as a place in the
+// world set against the player's: the game draws the player between two
+// ticks in a way Molang doesn't see (taking query.position back by
+// query.position_delta, or by the measured step times 1 − query.frame_alpha,
+// each left the pet shaking 20 times a second in the game: measured on the
+// screen at 126 fps). Along the ground the player's speed — each step of
+// query.position over the time since the step before, smoothed — moves it
+// back as evenly as the player is drawn; up and down each step is laid out
+// over the time it takes (a tick at most), all of it, so a jump is followed
+// exactly. Its height doesn't follow a jump or a crouch (query.position is
+// the player's eyes in Bedrock: a crouch moves it too): the pet keeps to its
+// own until it's off by more than a jump would take it (1.4 blocks) or by
+// more than 0.6 for a while (stairs, a ledge), then floats to the player's.
 // Angles are the game's yaw (0: +Z, clockwise from above); a bone turned by
-// +a turns clockwise (as the head by query.target_y_rotation).
+// +a turns clockwise (as the head by query.target_y_rotation, and as the
+// sleeping player's root is turned back by -query.body_y_rotation).
+// In a screen (the inventory's figure, the paper doll) the pet rests by the
+// shoulder and its state is left alone (that figure is drawn in the same frame).
 // Out: v.mcl_rel (where the pet is, round the player, from its facing),
 // v.mcl_r (how far, blocks), v.mcl_rise (how high, px), v.mcl_turn (its face,
 // from facing away from the player), v.mcl_wind (0…1, how fast it flies).
 const WRAP = (e) => `(math.mod(math.mod(${e}, 360) + 540, 360) - 180)`;
+const SPOT_TURN = 105.4; // where it's first put: by the left shoulder, a little behind it (pets_pack.py SPOT)
+const SPOT_OUT = 0.94; // …this far out, blocks
+const FAR = 2.2; // the player further off than this (blocks): it flies after them
+const KEEP = 1.1; // …and stops this far from them
+const NEAR = 0.6; // nearer than this: it moves aside
+const ASIDE = 1.2; // how far off straight behind it keeps when following (to the side: 1.2 ≈ 50°)
 const FOLLOW = [[
   'v.mcl_on = v.mcl_on ?? 0;',
-  't.x = q.position(0); t.y = q.position(1); t.z = q.position(2); t.yaw = q.body_y_rotation;',
-  't.reset = !v.mcl_on || math.abs(t.x - v.mcl_sx) + math.abs(t.z - v.mcl_sz) > 8;',
-  't.k = t.reset ? 1 : math.min(1, q.delta_time * 20);',
-  'v.mcl_sx = v.mcl_sx + (t.x - v.mcl_sx) * t.k; v.mcl_sy = v.mcl_sy + (t.y - v.mcl_sy) * t.k; v.mcl_sz = v.mcl_sz + (t.z - v.mcl_sz) * t.k;',
-  // the spot: by the left shoulder, a little behind it (pets_pack.py SPOT: 0.94 blocks out, 105.4° to the left)
-  't.ax = v.mcl_sx - math.sin(t.yaw - 105.4) * 0.94; t.az = v.mcl_sz + math.cos(t.yaw - 105.4) * 0.94;',
-  'v.mcl_px = t.reset ? t.ax : v.mcl_px; v.mcl_pz = t.reset ? t.az : v.mcl_pz; v.mcl_py = t.reset ? v.mcl_sy : v.mcl_py;',
+  '(!q.is_in_ui && !v.is_paperdoll) ? {',
+  // worked out once a frame (a second look in the same frame — another pass of the picture — moves nothing)
+  't.same = v.mcl_on && q.frame_alpha == v.mcl_fa && q.life_time == v.mcl_lt; v.mcl_fa = q.frame_alpha; v.mcl_lt = q.life_time;',
+  't.dt = t.same ? 0 : math.clamp(q.delta_time, 0, 0.1);',
+  't.x = q.position(0); t.y = q.position(1); t.z = q.position(2);',
+  // the player's step since the last frame: none, or now and then a tick's
+  't.sx = v.mcl_on ? t.x - v.mcl_qx : 0; t.sy = v.mcl_on ? t.y - v.mcl_qy : 0; t.sz = v.mcl_on ? t.z - v.mcl_qz : 0;',
+  'v.mcl_qx = t.x; v.mcl_qy = t.y; v.mcl_qz = t.z;',
+  't.step = math.abs(t.sx) + math.abs(t.sy) + math.abs(t.sz);',
+  't.reset = !v.mcl_on || t.step > 8;',
+  // how long since the step before (no step for a while: standing)
+  'v.mcl_wait = (v.mcl_wait ?? 0) + t.dt;',
+  't.moved = !t.reset && t.step > 0.000001;',
+  't.k = math.clamp(v.mcl_wait, math.max(t.dt, 0.001), 0.1); t.kp = math.clamp(v.mcl_wait, math.max(t.dt, 0.001), 0.05);',
+  // along the ground: the speed, smoothed
+  'v.mcl_ux = t.moved ? t.sx / t.k : (v.mcl_wait > 0.15 ? 0 : (v.mcl_ux ?? 0));',
+  'v.mcl_uz = t.moved ? t.sz / t.k : (v.mcl_wait > 0.15 ? 0 : (v.mcl_uz ?? 0));',
+  't.e = 1 - math.exp(-t.dt * 12);',
+  'v.mcl_vx = t.reset ? 0 : v.mcl_vx + (v.mcl_ux - v.mcl_vx) * t.e;',
+  'v.mcl_vz = t.reset ? 0 : v.mcl_vz + (v.mcl_uz - v.mcl_vz) * t.e;',
+  // up and down: each step laid out, all of it, over the time it takes to draw (a tick at most)
+  'v.mcl_ly = t.reset ? 0 : v.mcl_ly + t.sy;',
+  'v.mcl_ky = t.moved ? math.abs(v.mcl_ly) / t.kp : v.mcl_ky;',
+  't.gy = math.clamp(v.mcl_ly, -v.mcl_ky * t.dt, v.mcl_ky * t.dt); v.mcl_ly = v.mcl_ly - t.gy;',
+  'v.mcl_wait = t.moved ? 0 : v.mcl_wait;',
+  // the body's turn, smoothed
+  `v.mcl_yaw = t.reset ? q.body_y_rotation : v.mcl_yaw + ${WRAP('q.body_y_rotation - v.mcl_yaw')} * (1 - math.exp(-t.dt * 20));`,
+  't.yaw = v.mcl_yaw;',
+  // first put by the left shoulder; then moved back as the player moves
+  `v.mcl_ox = t.reset ? -math.sin(t.yaw - ${SPOT_TURN}) * ${SPOT_OUT} : v.mcl_ox - v.mcl_vx * t.dt;`,
+  `v.mcl_oz = t.reset ? math.cos(t.yaw - ${SPOT_TURN}) * ${SPOT_OUT} : v.mcl_oz - v.mcl_vz * t.dt;`,
+  'v.mcl_oy = t.reset ? 0 : v.mcl_oy - t.gy;',
   'v.mcl_go = t.reset ? 0 : v.mcl_go; v.mcl_face = t.reset ? t.yaw : v.mcl_face;',
-  't.dx = t.ax - v.mcl_px; t.dz = t.az - v.mcl_pz; t.away = math.sqrt(t.dx * t.dx + t.dz * t.dz);',
-  't.ox = v.mcl_px - v.mcl_sx; t.oz = v.mcl_pz - v.mcl_sz;',
-  'v.mcl_go = (t.away > 1.6 || t.ox * t.ox + t.oz * t.oz < 0.3) ? 1 : (t.away < 0.25 ? 0 : v.mcl_go);',
-  't.f = v.mcl_go ? 1 - math.exp(-q.delta_time * 3.8) : 0;',
-  'v.mcl_px = v.mcl_px + t.dx * t.f; v.mcl_pz = v.mcl_pz + t.dz * t.f;',
-  'v.mcl_py = v.mcl_py + (v.mcl_sy - v.mcl_py) * (1 - math.exp(-q.delta_time * 5));',
-  'v.mcl_wind = math.lerp(v.mcl_wind ?? 0, math.clamp(t.away * t.f / math.max(q.delta_time, 0.001) / 4, 0, 1), math.min(1, q.delta_time * 4));',
-  't.rx = v.mcl_px - v.mcl_sx; t.rz = v.mcl_pz - v.mcl_sz;',
-  'v.mcl_r = math.sqrt(t.rx * t.rx + t.rz * t.rz);',
-  'v.mcl_dir = math.atan2(-t.rx, t.rz);',
+  't.d = math.sqrt(v.mcl_ox * v.mcl_ox + v.mcl_oz * v.mcl_oz);',
+  `v.mcl_go = (t.d > ${FAR} || t.d < ${NEAR}) ? 1 : (math.abs(t.d - ${KEEP}) < 0.12 ? 0 : v.mcl_go);`,
+  // where it goes: KEEP from the player on the side it's on, a little to the side of straight behind
+  // (walked into: out to the player's left or right)
+  't.lx = math.cos(t.yaw); t.lz = math.sin(t.yaw); t.side = v.mcl_ox * t.lx + v.mcl_oz * t.lz < 0 ? -1 : 1;',
+  `t.ux = t.d < ${NEAR} ? t.lx * t.side : v.mcl_ox / math.max(t.d, 0.0001) + t.lx * t.side * ${ASIDE};`,
+  `t.uz = t.d < ${NEAR} ? t.lz * t.side : v.mcl_oz / math.max(t.d, 0.0001) + t.lz * t.side * ${ASIDE};`,
+  't.un = math.max(math.sqrt(t.ux * t.ux + t.uz * t.uz), 0.0001);',
+  `t.mx = t.ux / t.un * ${KEEP} - v.mcl_ox; t.mz = t.uz / t.un * ${KEEP} - v.mcl_oz; t.away = math.sqrt(t.mx * t.mx + t.mz * t.mz);`,
+  // easing into it (no jolt from standing still to full speed)
+  'v.mcl_pace = t.reset ? 0 : (v.mcl_pace ?? 0) + (v.mcl_go - (v.mcl_pace ?? 0)) * (1 - math.exp(-t.dt * 6));',
+  't.f = v.mcl_go ? (1 - math.exp(-t.dt * 3.8)) * v.mcl_pace : 0;',
+  'v.mcl_ox = v.mcl_ox + t.mx * t.f; v.mcl_oz = v.mcl_oz + t.mz * t.f;',
+  // its height: its own through a jump or a crouch, the player's once it's well off
+  't.h = math.abs(v.mcl_oy); v.mcl_hold = t.h > 0.6 ? (v.mcl_hold ?? 0) + t.dt : 0;',
+  'v.mcl_up = (t.h > 1.4 || v.mcl_hold > 0.8) ? 1 : (t.h < 0.05 ? 0 : (v.mcl_up ?? 0));',
+  'v.mcl_oy = v.mcl_up ? v.mcl_oy * math.exp(-t.dt * 4) : v.mcl_oy;',
+  'v.mcl_wind = math.lerp(v.mcl_wind ?? 0, math.clamp(t.away * t.f / math.max(t.dt, 0.001) / 4, 0, 1), 1 - math.exp(-t.dt * 4));',
+  'v.mcl_r = math.sqrt(v.mcl_ox * v.mcl_ox + v.mcl_oz * v.mcl_oz);',
+  'v.mcl_dir = math.atan2(-v.mcl_ox, v.mcl_oz);',
   `v.mcl_rel = ${WRAP('v.mcl_dir - t.yaw')};`,
   // flying after the player: its face to the player
-  't.look = math.atan2(t.rx, -t.rz);',
-  `v.mcl_face = v.mcl_go ? v.mcl_face + ${WRAP('t.look - v.mcl_face')} * math.min(1, q.delta_time * 4) : v.mcl_face;`,
+  't.look = math.atan2(v.mcl_ox, -v.mcl_oz);',
+  `v.mcl_face = v.mcl_go ? v.mcl_face + ${WRAP('t.look - v.mcl_face')} * (1 - math.exp(-t.dt * 4)) : v.mcl_face;`,
   `v.mcl_turn = ${WRAP('v.mcl_face - v.mcl_dir')};`,
-  'v.mcl_rise = (v.mcl_py - v.mcl_sy) * 16;',
+  'v.mcl_rise = v.mcl_oy * 16;',
   'v.mcl_on = 1;',
+  '};',
+  // a screen's figure: at rest by the shoulder, looking where the player does
+  `(q.is_in_ui || v.is_paperdoll) ? { v.mcl_rel = -${SPOT_TURN}; v.mcl_r = ${SPOT_OUT}; v.mcl_rise = 0; v.mcl_turn = ${SPOT_TURN}; v.mcl_wind = 0; };`,
 ].join(' ')];
 
 function controller(id) {
@@ -327,7 +390,9 @@ function dress(entity, items) {
   for (const it of items) {
     desc.geometry[`mcl_${it.id}`] = `geometry.mcl.${it.id}`;
     desc.textures[`mcl_${it.id}`] = `textures/entity/mcl/${it.id}`;
-    // not in first person, nor over a helmet / an elytra (like the cape); a pet whatever is worn
+    // not in first person (the game draws the player there in the hand's own
+    // layer, over the world — a pet in it looked pasted on the screen), nor
+    // over a helmet / an elytra (like the cape); a pet whatever is worn
     const own = it.slot === 'back' ? 'query.armor_texture_slot(1) != 5' : it.slot === 'pet' ? '1' : '!query.has_head_gear';
     desc.render_controllers.push({ [`controller.render.mcl.${it.id}`]: `!variable.is_first_person && !variable.map_face_icon && !query.is_spectator && ${own} && ${q(it.names)}` });
     for (const name of Object.keys(animation(it.id) || {})) {

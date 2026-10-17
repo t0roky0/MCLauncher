@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-test('shop preview: dragging stops auto rotation, refresh preserves the canvas, resize preserves user zoom', async () => {
+test('shop showcase: dragging stops auto rotation, refresh preserves the canvas, resize preserves user zoom', async () => {
   const nodes = [], stages = [], observers = [], requests = [];
   const h = (tag, ...args) => {
-    const node = { tag, children: [], swaps: 0, style: { setProperty() {} }, classList: { add() {}, toggle() {} },
+    const node = { tag, children: [], swaps: 0, replaced: 0, style: { setProperty() {} }, classList: { add() {}, toggle() {} },
       append(...els) { this.children.push(...els.flat().filter(x => x && x.tag)); },
+      replaceChildren(...els) { this.children = els.filter(x => x && x.tag); this.replaced++; },
       getBoundingClientRect: () => ({ width: 210, height: 380 }) };
     node.append(...args); nodes.push(node); return node;
   };
@@ -41,7 +42,8 @@ test('shop preview: dragging stops auto rotation, refresh preserves the canvas, 
   const state = { online: true, coins: 600, packs: [{id:'fallen_pack',name:'Fallen Angel',items:[{id:'fallen_wings'},{id:'horned_halo'}],price:600}] };
   requests[0](state); await new Promise(setImmediate);
   assert.equal(stages.length, 1);
-  const stage = stages[0], list = nodes.find(n => n.tag === 'div.shop-list');
+  const stage = stages[0], hero = nodes.find(n => n.tag === 'div.shop-feature.shop-hero');
+  assert.equal(hero.replaced, 1, 'the showcase gets its figure once');
   observers[0].callback();
   assert.ok(stage.viewer.controls.maxDistance >= stage.viewer.camera.position.length(), 'fit is not clamped by OrbitControls');
   assert.equal(stage.viewer.autoRotate, true);
@@ -49,7 +51,7 @@ test('shop preview: dragging stops auto rotation, refresh preserves the canvas, 
   assert.equal(stage.viewer.autoRotate, false);
   stage.viewer.zoom = 1.25;
   requests[1]({...state, coins: 700}); await new Promise(setImmediate);
-  assert.equal(list.swaps, 1, 'wallet response must not detach a captured canvas');
+  assert.equal(hero.replaced, 1, 'wallet response must not detach a captured canvas');
   assert.equal(stages.length, 1);
   assert.equal(stage.viewer.autoRotate, false);
   observers[0].callback();

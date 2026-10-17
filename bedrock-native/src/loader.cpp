@@ -11,9 +11,19 @@ struct Handle{HANDLE h;~Handle(){if(h&&h!=INVALID_HANDLE_VALUE)CloseHandle(h);}o
 std::string utf8(const std::wstring& s){int n=WideCharToMultiByte(CP_UTF8,0,s.data(),static_cast<int>(s.size()),nullptr,0,nullptr,nullptr);std::string r(n,0);WideCharToMultiByte(CP_UTF8,0,s.data(),static_cast<int>(s.size()),r.data(),n,nullptr,nullptr);return r;}
 std::string json(const std::wstring& s){std::string r="\"";for(char c:utf8(s)){if(c=='\\'||c=='"')r+='\\';if(static_cast<unsigned char>(c)>=32)r+=c;}return r+'"';}
 std::wstring image(HANDLE p){wchar_t s[32768]{};DWORD n=32768;return QueryFullProcessImageNameW(p,0,s,&n)?std::wstring(s,n):L"";}
+// a module in the game, or 0. A game loading modules just then may not give its
+// list at once (the snapshot fails: ERROR_BAD_LENGTH, ERROR_PARTIAL_COPY): again,
+// for a moment — else a module that's there read as missing ("module_not_loaded",
+// then "restart_game_for_module_update" on the next try: the launcher lost it)
 uintptr_t module(DWORD pid,const std::wstring& name,bool full=false){
- Handle snap{CreateToolhelp32Snapshot(TH32CS_SNAPMODULE|TH32CS_SNAPMODULE32,pid)};MODULEENTRY32W m{};m.dwSize=sizeof(m);
- if(Module32FirstW(snap,&m))do{if(!_wcsicmp(full?m.szExePath:m.szModule,name.c_str()))return reinterpret_cast<uintptr_t>(m.modBaseAddr);}while(Module32NextW(snap,&m));return 0;
+ for(int tries=0;tries<20;tries++){
+  Handle snap{CreateToolhelp32Snapshot(TH32CS_SNAPMODULE|TH32CS_SNAPMODULE32,pid)};
+  if(snap==INVALID_HANDLE_VALUE){Sleep(10);continue;}
+  MODULEENTRY32W m{};m.dwSize=sizeof(m);
+  if(Module32FirstW(snap,&m))do{if(!_wcsicmp(full?m.szExePath:m.szModule,name.c_str()))return reinterpret_cast<uintptr_t>(m.modBaseAddr);}while(Module32NextW(snap,&m));
+  return 0;
+ }
+ return 0;
 }
 int fail(const char* reason){std::cerr<<reason<<" ("<<GetLastError()<<")\n";return 1;}
 std::string why(const char* reason){return std::string(reason)+" ("+std::to_string(GetLastError())+")";}
@@ -38,6 +48,8 @@ std::string inject(DWORD pid,const fs::path& dll,bool& already){
  if(!thread){VirtualFreeEx(process,mem,0,MEM_RELEASE);return why("load_thread");}
  if(WaitForSingleObject(thread,15000)!=WAIT_OBJECT_0)return why("load_timeout");
  VirtualFreeEx(process,mem,0,MEM_RELEASE);
+ // LoadLibraryW's answer (the module's handle, its low half) says it's in; the list, if that's lost
+ DWORD loaded=0;if(GetExitCodeThread(thread,&loaded)&&loaded)return "";
  if(!module(pid,dll.wstring(),true))return why("module_not_loaded");
  return "";
 }
