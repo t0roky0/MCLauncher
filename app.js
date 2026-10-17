@@ -192,7 +192,7 @@ if (form) {
     note.className = 'redeem-note ok';
     note.textContent = `${t('codeOpening')} `;
     const link = document.createElement('a');
-    link.href = 'http://5.39.250.200:8080/MCLauncher-Setup.exe';
+    link.href = 'https://github.com/t0roky0/MCLauncher/releases/latest/download/MCLauncher-Setup.exe';
     link.textContent = t('downloadApp') || 'MC Launcher';
     note.appendChild(link);
     // the launcher's own link: it opens with the code (nothing is sent anywhere from this page)
