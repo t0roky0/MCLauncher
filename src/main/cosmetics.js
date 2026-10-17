@@ -226,14 +226,27 @@ function sample(p) {
   if (!prev) return;
   const dt = t - prev.at;
   if (dt <= 0 || dt > 5000) return; // a pause (menu, alt-tab): not counted
+  // the week's quests (quests.js) count the same
+  const weekly = require('./quests');
   add('minutes', dt / 60000);
+  weekly.add('minutes', dt / 60000);
   const host = String(p.server || '').toLowerCase().replace(/:\d+$/, '');
-  if (host) add('serverMinutes', dt / 60000, (q) => (q.servers || []).some((sv) => host === sv || host.endsWith(`.${sv}`)));
+  if (host) {
+    add('serverMinutes', dt / 60000, (q) => (q.servers || []).some((sv) => host === sv || host.endsWith(`.${sv}`)));
+    weekly.add('serverMinutes', dt / 60000);
+  }
   if (Array.isArray(p.position) && Array.isArray(prev.pos) && p.dimension === prev.dim) {
     const d = Math.hypot(p.position[0] - prev.pos[0], p.position[2] - prev.pos[2]);
-    if (d < 30) add('blocks', d); // more is a teleport, not a walk
+    // more is a teleport, not a walk
+    if (d < 30) {
+      add('blocks', d);
+      weekly.add('blocks', d);
+    }
   }
-  if (Number.isFinite(p.kills) && Number.isFinite(prev.kills) && p.kills > prev.kills && p.kills - prev.kills < 20) add('kills', p.kills - prev.kills);
+  if (Number.isFinite(p.kills) && Number.isFinite(prev.kills) && p.kills > prev.kills && p.kills - prev.kills < 20) {
+    add('kills', p.kills - prev.kills);
+    weekly.add('kills', p.kills - prev.kills);
+  }
 }
 
 function gameStopped(pid) {

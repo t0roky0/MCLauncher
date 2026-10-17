@@ -265,6 +265,11 @@ function register(ctx) {
   // ICE for voice and the world tunnel: our relay's STUN/TURN, fresh credentials
   handle('net:ice', () => require('./relay-server').iceServers());
   handle('cosmetics:state', () => require('./cosmetics').view());
+  // the week's quests (quests.js): what they are and how far they've got; the drop seen
+  handle('quests:state', () => require('./quests').view());
+  handle('quests:refresh', () => require('./quests').refresh());
+  handle('quests:seen', (e, week) => require('./quests').seen(Number(week)));
+  handle('quests:pick', (e, week, pick) => require('./quests').pickReward(Number(week), Number(pick)));
   handle('profile:get', () => require('./profiles').view());
   handle('profile:setAvatar', (e, data) => require('./profiles').setAvatar(data ? str(data, 12000) : ''));
   handle('profiles:of', (e, xuids, opts) => require('./profiles').of(Array.isArray(xuids) ? xuids.slice(0, 40).map((x) => str(x, 20)) : [], { force: !!(opts && opts.force) }));

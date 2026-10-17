@@ -223,8 +223,8 @@ let lastMenu = '';
 let lastChat = '';
 const act = (name, value) => window.overlay?.action(name, value);
 
-function btn(label, onClick, { cls = '', ic = '', on = false } = {}) {
-  const b = h(`button.ov-btn${cls}${on ? '.on' : ''}`, { type: 'button' }, ic ? icon(ic) : null, label ? h('span', label) : null);
+function btn(label, onClick, { cls = '', ic = '', on = false, title = '' } = {}) {
+  const b = h(`button.ov-btn${cls}${on ? '.on' : ''}`, { type: 'button', title: title || null, 'aria-label': title || null }, ic ? icon(ic) : null, label ? h('span', label) : null);
   b.addEventListener('click', onClick);
   return b;
 }
@@ -415,6 +415,40 @@ document.addEventListener('mousedown', (e) => {
   catchKey(e.button === 3 ? 'Mouse4' : 'Mouse5');
 }, true);
 
+// The week's quests (quests.js): read here, in the menu, only — nothing of
+// them is put over the game (a quest done: one short notice in the corner).
+function questsPanel(m, ru) {
+  const v = m.quests || {};
+  if (!v.account) return [h('div.ov-hint', ru ? 'Задания недели появятся, когда войдёте через Xbox в лаунчере.' : 'Weekly quests show up once you sign in with Xbox in the launcher.')];
+  if (!(v.quests || []).length) return [h('div.ov-hint', ru ? 'Задания загружаются…' : 'Loading quests…')];
+  const left = Math.max(0, v.ends - Date.now());
+  const d = Math.floor(left / 86400000);
+  const hh = Math.floor((left % 86400000) / 3600000);
+  const mm = Math.floor((left % 3600000) / 60000);
+  const leftText = d ? (ru ? `${d} д ${hh} ч` : `${d}d ${hh}h`) : (ru ? `${hh} ч ${mm} мин` : `${hh}h ${mm}m`);
+  const COLOR = { minutes: '#5fc35a', serverMinutes: '#9a62ff', blocks: '#4b8bff', kills: '#ef5a50', days: '#e4ae39' };
+  const amount = (q) => (q.kind === 'minutes' || q.kind === 'serverMinutes'
+    ? `${Math.floor(q.progress)} / ${q.goal} ${ru ? 'мин' : 'min'}`
+    : q.kind === 'days' ? `${q.progress} / ${q.goal} ${ru ? 'дн.' : 'days'}` : `${Math.floor(q.progress).toLocaleString(ru ? 'ru-RU' : 'en-US')} / ${q.goal.toLocaleString(ru ? 'ru-RU' : 'en-US')}`);
+  const n = v.quests.filter((q) => q.claimed).length;
+  const r = v.reward || {};
+  const status = v.rewardWeek != null
+    ? (ru ? 'Все три выполнены — выбери награду в лаунчере: одна из трёх карт' : 'All three done — pick your reward in the launcher: one of three cards')
+    : r.state === 'taken'
+      ? (ru ? 'Награда недели получена' : 'This week\'s reward is taken')
+      : (ru ? `Выполнено ${n} из 3 — за все три выбор из трёх карт: монеты или редкая косметика` : `${n} of 3 done — all three: pick one of three cards, coins or a rare cosmetic`);
+  return [
+    h('div.ov-menu-label', ru ? `Обновятся через ${leftText}` : `New ones in ${leftText}`),
+    ...v.quests.map((q) => h(`div.ov-quest${q.claimed ? '.done' : ''}`, { style: { '--tc': COLOR[q.kind] || '#e4ae39' } },
+      h('div.ov-quest-top',
+        h('span.ov-quest-name', (ru ? q.title.ru : q.title.en) || q.title.ru),
+        q.claimed ? h('span.ov-quest-ok', icon('check')) : null),
+      h('div.ov-quest-bar', h('i', { style: { width: `${Math.round(Math.min(1, q.claimed ? 1 : q.progress / Math.max(1, q.goal)) * 100)}%` } })),
+      h('div.ov-quest-foot', q.claimed ? (ru ? 'Выполнено' : 'Done') : amount(q)))),
+    h(`div.ov-quest-status${v.rewardWeek != null ? '.ready' : ''}`, status),
+  ];
+}
+
 function renderMenu(ru) {
   const m = state.menu;
   const open = state.mode === 'menu' && m && !framed;
@@ -424,17 +458,17 @@ function renderMenu(ru) {
     lastMenu = '';
     return;
   }
-  const key = JSON.stringify([m.tab, m.micOff, m.deaf, m.voiceMode, m.pttName, m.lobbyVoice, m.lobby, m.audio, m.mic, m.overlayInVideo, m.replay, m.replayOn, m.replayName, !!state.rec, ru, m.game, m.bedrock, catching,
+  const key = JSON.stringify([m.tab, m.micOff, m.deaf, m.voiceMode, m.pttName, m.lobbyVoice, m.lobby, m.audio, m.mic, m.overlayInVideo, m.replay, m.replayOn, m.replayName, !!state.rec, ru, m.game, m.bedrock, m.quests, catching,
     (state.voice?.peers || []).map((p) => [p.id, p.name, p.volume, p.face ? 1 : 0])]);
   if (key !== lastMenu) {
     lastMenu = key;
-    const tabs = [['voice', 'mic', ru ? 'Голос' : 'Voice'], ['chat', 'chat', ru ? 'Чат' : 'Chat'], ['capture', 'image', ru ? 'Захват' : 'Capture'], ['game', 'gamepad', ru ? 'Игра' : 'Game']];
-    const body = m.tab === 'chat' ? chatPanel(m, ru) : m.tab === 'capture' ? capturePanel(m, ru) : m.tab === 'game' ? gamePanel(m, ru) : voicePanel(m, ru);
+    const tabs = [['voice', 'mic', ru ? 'Голос' : 'Voice'], ['chat', 'chat', ru ? 'Чат' : 'Chat'], ['capture', 'image', ru ? 'Захват' : 'Capture'], ['game', 'gamepad', ru ? 'Игра' : 'Game'], ['quests', 'star', ru ? 'Задания' : 'Quests']];
+    const body = m.tab === 'chat' ? chatPanel(m, ru) : m.tab === 'capture' ? capturePanel(m, ru) : m.tab === 'game' ? gamePanel(m, ru) : m.tab === 'quests' ? questsPanel(m, ru) : voicePanel(m, ru);
     swap(menu,
       h('div.ov-dock',
         h('img.ov-dock-logo', { src: 'mcl://app/assets/icon/app.png', alt: '' }),
         ...tabs.map(([id, ic, label]) => btn(label, () => act('tab', id), { ic, on: m.tab === id, cls: '.tab' })),
-        btn(ru ? 'Расположение' : 'Layout', () => act('edit'), { ic: 'edit', cls: '.tab' }),
+        btn('', () => act('edit'), { ic: 'edit', cls: '.tab.icon-only', title: ru ? 'Расположение панелей' : 'Panel layout' }),
         btn('', () => send('done'), { ic: 'x', cls: '.tab.close' })),
       h(`div.ov-panel.${m.tab}`, ...body),
       h('div.ov-menu-foot', ru ? `Esc${state.editName ? ` или ${state.editName}` : ''} — вернуться в игру` : `Esc${state.editName ? ` or ${state.editName}` : ''} — back to the game`));

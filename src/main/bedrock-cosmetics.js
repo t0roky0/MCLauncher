@@ -275,8 +275,18 @@ const FAR = 2.2; // the player further off than this (blocks): it flies after th
 const KEEP = 1.1; // …and stops this far from them
 const NEAR = 0.6; // nearer than this: it moves aside
 const ASIDE = 1.2; // how far off straight behind it keeps when following (to the side: 1.2 ≈ 50°)
+// Every variable it keeps, made before anything reads it: Bedrock stops the
+// whole expression at a read of a variable that isn't there yet (content log:
+// "unhandled request for unknown variable") — on the first frame that left
+// v.mcl_on never set, so it stopped there every frame and the pet stood still
+// by the shoulder (2.1.20–2.1.21: v.mcl_ky read before it was ever written).
+const FOLLOW_VARS = {
+  on: 0, fa: 0, lt: 0, qx: 0, qy: 0, qz: 0, wait: 0, ux: 0, uz: 0, vx: 0, vz: 0, ly: 0, ky: 0, yaw: 0,
+  ox: 0, oy: 0, oz: 0, go: 0, face: 0, pace: 0, hold: 0, up: 0, wind: 0, dir: 0,
+  r: SPOT_OUT, rel: -SPOT_TURN, turn: SPOT_TURN, rise: 0,
+};
 const FOLLOW = [[
-  'v.mcl_on = v.mcl_on ?? 0;',
+  Object.entries(FOLLOW_VARS).map(([k, v]) => `v.mcl_${k} = v.mcl_${k} ?? ${v};`).join(' '),
   '(!q.is_in_ui && !v.is_paperdoll) ? {',
   // worked out once a frame (a second look in the same frame — another pass of the picture — moves nothing)
   't.same = v.mcl_on && q.frame_alpha == v.mcl_fa && q.life_time == v.mcl_lt; v.mcl_fa = q.frame_alpha; v.mcl_lt = q.life_time;',
@@ -330,7 +340,10 @@ const FOLLOW = [[
   'v.mcl_wind = math.lerp(v.mcl_wind ?? 0, math.clamp(t.away * t.f / math.max(t.dt, 0.001) / 4, 0, 1), 1 - math.exp(-t.dt * 4));',
   'v.mcl_r = math.sqrt(v.mcl_ox * v.mcl_ox + v.mcl_oz * v.mcl_oz);',
   'v.mcl_dir = math.atan2(-v.mcl_ox, v.mcl_oz);',
-  `v.mcl_rel = ${WRAP('v.mcl_dir - t.yaw')};`,
+  // round the model by the body's turn as the game turns the model itself —
+  // not the smoothed one: a quick turn of the body (A/D) left the pet swinging
+  // a little with the model while the smoothed turn caught up
+  `v.mcl_rel = ${WRAP('v.mcl_dir - q.body_y_rotation')};`,
   // flying after the player: its face to the player
   't.look = math.atan2(v.mcl_ox, -v.mcl_oz);',
   `v.mcl_face = v.mcl_go ? v.mcl_face + ${WRAP('t.look - v.mcl_face')} * (1 - math.exp(-t.dt * 4)) : v.mcl_face;`,

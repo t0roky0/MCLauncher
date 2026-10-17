@@ -139,7 +139,7 @@ body.menu { background-color: rgb(10 10 11 / 0.35); cursor: default; }
 .ov-menu:not(:empty) { animation: ov-menu-in 0.16s cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes ov-menu-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 /* centred from script in whole pixels: a half-pixel left blurs the pixel font */
-.ov-menu { position: fixed; left: 0; top: 22px; z-index: 3; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: min(760px, calc(100vw - 32px)); font-size: 16px; }
+.ov-menu { position: fixed; left: 0; top: 22px; z-index: 3; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: min(880px, calc(100vw - 32px)); font-size: 16px; }
 .ov-menu:empty { display: none; }
 .ov-dock { display: flex; align-items: center; gap: 4px; padding: 6px; min-width: 0; overflow: hidden; background: #1c1c1d; box-shadow: 0 0 0 2px #000, inset 0 0 0 2px rgb(255 255 255 / 0.06), 0 10px 30px rgb(0 0 0 / 0.45); }
 .ov-dock-logo { flex: none; width: 30px; height: 30px; margin: 0 8px 0 4px; image-rendering: auto; }
@@ -231,3 +231,22 @@ body.badge .ov-rec { position: static; transform: none; }
   background: color-mix(in srgb, var(--red) 14%, #1c1c1d); box-shadow: 0 0 0 2px #000; }
 .ov-note .px-icon { flex: none; color: var(--red); }
 @media (max-width: 640px) { .ov-set-more { flex-wrap: wrap; } .ov-set-label.gap { margin-left: 0; } .ov-set-row .ov-seg button { padding: 2px 8px 0; } }
+
+/* the week's quests (the menu's tab) */
+.ov-quest { --tc: #4b69ff; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border-left: 3px solid var(--tc); }
+.ov-quest.t-purple { --tc: #8847ff; }
+.ov-quest.t-gold { --tc: #e4ae39; }
+.ov-quest + .ov-quest { margin-top: 6px; }
+.ov-quest-top { display: flex; align-items: center; gap: 8px; }
+.ov-quest-name { flex: 1; min-width: 0; font-size: 13px; color: #fff; }
+.ov-quest.done .ov-quest-name { color: rgba(255, 255, 255, 0.55); text-decoration: line-through; }
+.ov-quest-coin { display: inline-flex; align-items: center; gap: 4px; }
+.ov-quest-coin img { width: 14px; height: 14px; image-rendering: pixelated; }
+.ov-quest-coin b { font-size: 13px; color: #ffd25e; }
+.ov-quest-ok { display: inline-flex; color: #7ed957; }
+.ov-quest-bar { height: 5px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.ov-quest-bar i { display: block; height: 100%; background: var(--tc); }
+.ov-quest.done .ov-quest-bar i { background: #7ed957; }
+.ov-quest-foot { font-size: 11px; color: rgba(255, 255, 255, 0.6); }
+.ov-quest-status { margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, 0.7); }
+.ov-quest-status.ready { color: #ffd25e; }

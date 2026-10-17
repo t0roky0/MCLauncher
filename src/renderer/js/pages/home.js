@@ -15,6 +15,7 @@ import { partyPanel } from '../party-panel.js';
 import * as voice from '../voice.js';
 import { memberVoice, paintVoice } from '../voice-indicator.js';
 import { eventPromo, shopPromo } from '../cosmetics-panel.js';
+import { questsPromo } from '../quests-ui.js';
 import { Particles, THEMES, autoTheme } from '../particles.js';
 
 // world mode → badge sprite (icons.js)
@@ -185,7 +186,10 @@ export function mount(root, params, { go }) {
   // …and under it the shop's packs (an ad of our own)
   const shopAd = shopPromo(go);
   life.add(shopAd.dispose);
-  const rightTools = h('div.lobby-right-tools', heroInfo, sideRight, promo.el, shopAd.el);
+  // …and the week's quests (quests-ui.js)
+  const quests = questsPromo();
+  life.add(quests.dispose);
+  const rightTools = h('div.lobby-right-tools', heroInfo, sideRight, promo.el, quests.el, shopAd.el);
   let dock = null;
   function toggleChat(force) {
     const open = typeof force === 'boolean' ? force : !dock;
@@ -380,8 +384,20 @@ export function mount(root, params, { go }) {
   const caption = h('div.launch-caption');
   const flyout = h('div.flyout');
   const panel = h('div.inst-panel');
-  const hero = h('div.hero', frame, side, rightTools, picker, h('div.launchbar', instBtn, launchBtn, worldsBtn, folderBtn), caption, flyout, panel);
+  const launchbar = h('div.launchbar', instBtn, launchBtn, worldsBtn, folderBtn);
+  const hero = h('div.hero', frame, side, rightTools, picker, launchbar, caption, flyout, panel);
   root.append(hero);
+  // The corner's cards above the launch bar: when the event, the quests and the
+  // shop's ad don't all fit, the ad goes (the shop has its own tab)
+  function fitCorner() {
+    shopAd.el.classList.remove('squeezed');
+    if (rightTools.hidden || !launchbar.offsetHeight) return;
+    if (rightTools.getBoundingClientRect().bottom > launchbar.getBoundingClientRect().top - 10) shopAd.el.classList.add('squeezed');
+  }
+  const cornerRo = new ResizeObserver(fitCorner);
+  cornerRo.observe(rightTools);
+  cornerRo.observe(hero);
+  life.add(() => cornerRo.disconnect());
 
   function entries() {
     return store.get('installs') || [];

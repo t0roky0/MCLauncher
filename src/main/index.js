@@ -439,6 +439,7 @@ function main() {
     party.leave(); // friends see us go now, not when we stop beating
     require('./messenger').flush();
     require('./cosmetics').flush();
+    require('./quests').flush();
     require('./profiles').flush();
     require('./discord').shutdown();
   });
@@ -564,6 +565,26 @@ function main() {
     cosmetics.setAccount(cosmeticsAccount);
     profiles.setAccount(cosmeticsAccount);
     cosmetics.init();
+    // the week's quests: to the window; a quest done — its coins, a short word (over the game: small, it goes by itself)
+    const quests = require('./quests');
+    quests.onEvent((type, payload) => {
+      if (type === 'changed') {
+        send('quests:changed', payload);
+        send('shop:changed', require('./shop').state());
+      }
+      if (type !== 'claimed') return;
+      send('quests:claimed', payload);
+      const ru = config.get().language !== 'en';
+      const title = payload.ready
+        ? (ru ? 'Все задания недели выполнены!' : 'All weekly quests done!')
+        : (ru ? `Задание недели выполнено · ${payload.count}/3` : `Weekly quest done · ${payload.count}/3`);
+      const text = payload.ready
+        ? (ru ? 'Выбери награду в лаунчере — одна из трёх карт' : 'Pick your reward in the launcher — one of three cards')
+        : (payload.title && (ru ? payload.title.ru : payload.title.en)) || '';
+      if (require('./overlay').toast({ title, text, icon: 'star', kind: 'quest', ms: payload.ready ? 6000 : 3500 })) return;
+      if (!(mainWin && !mainWin.isDestroyed() && mainWin.isVisible())) notify(title, text, () => navigate('home'), { icon: 'star', kind: 'quest', overlay: false });
+    });
+    quests.start();
     // the profile: to the window when it changes; to our server (friends) when what it shows does
     profiles.onEvent((type, payload) => { if (type === 'changed') send('profile:changed', payload); });
     cosmetics.onEvent((type) => { if (type === 'changed') profiles.push(); });
@@ -580,6 +601,7 @@ function main() {
       cosmeticsAccount = key;
       cosmetics.setAccount(key);
       profiles.setAccount(key);
+      require('./quests').refresh();
       require('./shop').refresh().then((state) => send('shop:changed', state)).catch(() => {});
     });
     profiles.push();

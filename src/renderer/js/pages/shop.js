@@ -78,9 +78,10 @@ export function mount(root) {
     const out = [];
     for (const p of (state && state.packs) || []) {
       const items = p.items || [];
-      const pet = items.length > 0 && items.every((i) => i.slot === 'pet');
-      out.push({ key: `pack:${p.id}`, kind: pet ? 'pet' : 'pack', pack: p, items, owned: !!p.owned, color: p.color, featured: !!p.featured });
-      if (!pet) for (const i of items) out.push({ key: `item:${i.id}`, kind: i.slot, item: i, pack: p, items: [i], owned: !!p.owned, color: p.color, part: true });
+      // a pack of one thing (a pet, a hat) is that thing: its own kind, shown once
+      const one = items.length === 1;
+      out.push({ key: `pack:${p.id}`, kind: one ? items[0].slot : 'pack', pack: p, items, owned: !!p.owned, color: p.color, featured: !!p.featured });
+      if (!one) for (const i of items) out.push({ key: `item:${i.id}`, kind: i.slot, item: i, pack: p, items: [i], owned: !!p.owned, color: p.color, part: true });
     }
     return out;
   }

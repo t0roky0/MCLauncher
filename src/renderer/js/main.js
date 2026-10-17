@@ -18,6 +18,7 @@ import { bedrockMismatch, mismatchText, switchBedrockAccount } from './bedrock-a
 import { initVoice } from './voice.js';
 import { initTunnel } from './tunnel.js';
 import { openFixer } from './fixer.js';
+import { watchDrop } from './quests-ui.js';
 
 const PAGES = { home: Home, newInstall: InstallForm, editInstall: InstallForm, skins: Skins, shop: Shop, friends: Friends, settings: Settings, accounts: Accounts };
 
@@ -374,6 +375,8 @@ async function boot() {
     setTimeout(() => openPartyDialog({ code }), 350);
   };
   onEvent('party:invite', invite);
+  // a new week's quests: their drop, once (quests-ui.js)
+  watchDrop();
   api('party:takeInvite').then(invite).catch(() => {});
   // a code from the site (mclauncher://redeem/…): Settings, the code filled in
   const redeemLink = (code) => { if (code) go('settings', { redeem: code }); };

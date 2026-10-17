@@ -4,7 +4,7 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-const CALLS = /^(win|app|console|config|accounts|installs|versions|game|worlds|servers|skins|friends|log|java|bedrock|party|tunnel|messages|nearby|voice|cosmetics|shop|net|profile|profiles|fixer):[A-Za-z]+$/;
+const CALLS = /^(win|app|console|config|accounts|installs|versions|game|worlds|servers|skins|friends|log|java|bedrock|party|tunnel|messages|nearby|voice|cosmetics|shop|net|profile|profiles|fixer|quests):[A-Za-z]+$/;
 // fire-and-forget messages: the tunnel's bytes, too many for invoke round trips
 const SENDS = new Set(['tunnel:data', 'tunnel:close', 'tunnel:pause']);
 const EVENTS = new Set([
@@ -34,6 +34,8 @@ const EVENTS = new Set([
   'party:start',
   'party:invite',
   'cosmetics:redeemLink',
+  'quests:changed',
+  'quests:claimed',
   'party:chat',
   'party:signal',
   'party:emote',

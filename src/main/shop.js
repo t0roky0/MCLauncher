@@ -64,6 +64,13 @@ async function call(body) {
   return null;
 }
 
+// the coins as the server just said (a quest's reward: quests.js)
+function setCoins(n) {
+  if (!Number.isFinite(n)) return;
+  coins = n;
+  online = true;
+}
+
 // what the server says about this launcher, kept
 function apply(res) {
   coins = res.coins;
@@ -169,6 +176,7 @@ function start() {
 }
 
 module.exports = {
+  setCoins,
   state,
   refresh,
   buy,

@@ -173,6 +173,8 @@ function menuView() {
     // the game settings (both games): config.game, the zoom key's name, and what Bedrock's module says works
     game: { ...(config.get().game || {}), keyName: require('./game-comfort').keyName((config.get().game || {}).zoomKey || 'KeyC') },
     bedrock: require('./bedrock-bridge').comfort(),
+    // the week's quests (quests.js): read in the menu only, never put over the game
+    quests: require('./quests').view(),
   };
 }
 
@@ -413,7 +415,7 @@ function action(name, value) {
   const v = config.get().voice || {};
   switch (name) {
     case 'tab':
-      if (['voice', 'chat', 'capture', 'game'].includes(value)) tab = value;
+      if (['voice', 'chat', 'capture', 'game', 'quests'].includes(value)) tab = value;
       break;
     case 'mic':
       config.updateSettings({ voice: { ...v, micOff: !v.micOff } });

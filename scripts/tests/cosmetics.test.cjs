@@ -12,7 +12,10 @@ function load(month) {
     './log': { info() {}, warn() {} },
     // a receipt "signed" for a device: sig = 'ok:' + its device key (the real check: receipts.test.cjs)
     './receipts': { check: (r, device) => (r && r.sig === `ok:${device}` && Array.isArray(r.items) ? r.items.slice() : null) },
+    // the week's quests count the same samples (quests.js): what they were given
+    './quests': { add: (kind, n) => weekly.push([kind, n]) },
   };
+  const weekly = [];
   const module = { exports: {} };
   let clock = 1_000_000;
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../src/main/cosmetics.js'), 'utf8'), {
@@ -23,7 +26,7 @@ function load(month) {
   c._test.setNow(`2026-${String(month).padStart(2, '0')}-15T12:00:00`);
   const events = [];
   c.onEvent((type, p) => events.push([type, p]));
-  return { c, events, dir, tick: (ms) => { clock += ms; } };
+  return { c, events, dir, weekly, tick: (ms) => { clock += ms; } };
 }
 
 const item = (c, id) => c.view().items.find((i) => i.id === id);
@@ -48,7 +51,7 @@ test('October: the hockey mask for coming in — waits to be claimed, then worn;
 });
 
 test('time in worlds, blocks walked, teleports and pauses not counted', () => {
-  const { c, tick } = load(10);
+  const { c, tick, weekly } = load(10);
   c.init();
   c.sample({ pid: 7, position: [0, 64, 0], server: '' });
   for (let k = 1; k <= 10; k++) {
@@ -65,6 +68,11 @@ test('time in worlds, blocks walked, teleports and pauses not counted', () => {
   assert.equal(c.view().items.find((i) => i.id === 'witch_hat').quest.progress, 0); // floor of 11 s in minutes
   for (let k = 0; k < 200; k++) { tick(1000); c.sample({ pid: 7, position: [5000, 64, 0], server: '' }); }
   assert.equal(item(c, 'witch_hat').quest.progress, 3);
+  // the week's quests get the same: the blocks walked (not the teleport), the minutes played
+  const sum = (kind) => weekly.filter(([k]) => k === kind).reduce((a, [, n]) => a + n, 0);
+  assert.equal(sum('blocks'), 50);
+  assert.ok(Math.abs(sum('minutes') - 211 / 60) < 1e-9);
+  assert.equal(sum('serverMinutes'), 0);
 });
 
 test('Hypixel / The Hive time and monsters beaten give their items', () => {
@@ -111,7 +119,7 @@ test('every item has a rarity and a class (head, back or a pet)', () => {
   c.init();
   const items = c.view().items;
   assert.equal(items.filter((i) => !i.shop).length, 5); // the event's
-  assert.equal(items.filter((i) => i.shop).map((i) => i.id).sort().join(), 'angel_wings,balaboom,capybara,devil_horns,devil_wings,fallen_wings,halo,horned_halo,warden'); // the shop's
+  assert.equal(items.filter((i) => i.shop).map((i) => i.id).sort().join(), 'angel_wings,balaboom,capybara,devil_horns,devil_wings,fallen_wings,halo,horned_halo,santa_hat,warden'); // the shop's
   for (const it of items) {
     assert.ok(['common', 'rare', 'epic', 'legendary'].includes(it.rarity), it.id);
     assert.ok(['head', 'back', 'pet'].includes(it.slot), it.id);
