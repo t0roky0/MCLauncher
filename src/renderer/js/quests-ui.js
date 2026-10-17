@@ -8,7 +8,7 @@ import { h, swap } from './dom.js';
 import { t, getLang } from './i18n.js';
 import { icon } from './icons.js';
 import { api, onEvent } from './core.js';
-import { button, toast } from './ui.js';
+import { button, toast, modal } from './ui.js';
 import { remaining } from './cosmetics-panel.js';
 
 const COIN = 'mcl://app/assets/images/coin.png';
@@ -38,18 +38,42 @@ export function leftText(ends) {
   return d ? t('cos.leftDH', { d, h: hh }) : t('cos.leftHM', { h: hh, m });
 }
 
-function row(q) {
+function row(q, { big = false } = {}) {
   const k = kindOf(q);
   const share = Math.min(1, q.progress / Math.max(1, q.goal));
   return h(
-    'div.q-row',
+    `div.q-row${big ? '.big' : ''}`,
     { class: q.claimed ? 'done' : '', style: { '--kc': k.color } },
-    h('span.q-ic', q.claimed ? icon('check') : icon(k.ic)),
-    h('div.q-main',
-      h('div.q-name', local(q.title)),
-      h('div.q-bar', h('i', { style: { width: `${Math.round((q.claimed ? 1 : share) * 100)}%` } })),
-      h('div.q-row-foot', q.claimed ? t('quests.done') : progressText(q))),
+    h('div.q-name', local(q.title), q.claimed ? h('span.q-check', icon('check')) : null),
+    h('div.q-bar', h('i', { style: { width: `${Math.round((q.claimed ? 1 : share) * 100)}%` } })),
+    h('div.q-row-foot', q.claimed ? t('quests.done') : progressText(q)),
   );
+}
+
+// The week's quests in a plain window: the three, how far, the time left, the reward's state
+export function showList(view, { fresh = false } = {}) {
+  if (!view || !view.quests.length || document.querySelector('.dialog.quests-list')) return;
+  const n = view.quests.filter((q) => q.claimed).length;
+  const r = view.reward || { state: 'locked' };
+  let foot;
+  if (view.rewardWeek != null) foot = h('div.ql-foot.ready', icon('sparkle'), h('span', t('quests.rewardReady')));
+  else if (r.state === 'taken') foot = h('div.ql-foot', icon('check'), h('span', t('quests.got', { prize: prizeText(r.cards[r.pick]) })));
+  else foot = h('div.ql-foot', h('div.q-dots', [0, 1, 2].map((i) => h('i', { class: i < n ? 'on' : '' }))), h('span', t('quests.dropHint')));
+  const body = h('div.ql',
+    h('div.ql-left', icon('clock'), h('span', t('quests.dropSub', { left: leftText(view.ends) }))),
+    ...view.quests.map((q) => row(q, { big: true })),
+    foot);
+  const buttons = view.rewardWeek != null
+    ? [{ label: t('common.close'), value: false }, { label: t('quests.pickNow'), variant: 'primary', onClick: (close) => { close(true); setTimeout(() => showReward(view), 200); } }]
+    : [{ label: fresh ? t('quests.dropGo') : t('common.close'), variant: fresh ? 'primary' : 'secondary', value: false }];
+  modal({
+    title: fresh ? t('quests.newTitle') : t('quests.title'),
+    body,
+    buttons,
+    width: 460,
+    cls: 'quests-list',
+    onClose: () => { if (fresh) api('quests:seen', view.week).catch(() => {}); },
+  });
 }
 
 function prizeText(card) {
@@ -62,9 +86,7 @@ export function questsPromo() {
   let view = null;
   let clock = 0;
   el.addEventListener('click', () => {
-    if (!view || !view.quests.length) return;
-    if (view.rewardWeek != null) showReward(view);
-    else showDrop(view, { replay: true });
+    if (view && view.quests.length) showList(view);
   });
 
   function show(v) {
@@ -288,7 +310,7 @@ export function watchDrop() {
   let offered = null;
   const maybe = (v) => {
     if (!v || !v.account || !v.quests.length || document.hidden) return;
-    if (v.fresh) showDrop(v);
+    if (v.fresh) showList(v, { fresh: true });
     else if (v.rewardWeek != null && offered !== v.rewardWeek) {
       offered = v.rewardWeek;
       showReward(v);

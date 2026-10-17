@@ -10,7 +10,7 @@
 import { h, swap, bag } from '../dom.js';
 import { t, getLang } from '../i18n.js';
 import { icon } from '../icons.js';
-import { api, store, onEvent } from '../core.js';
+import { api, store, onEvent, shortCoins } from '../core.js';
 import { button, toast, confirmDialog, spinner, modal } from '../ui.js';
 import { SkinStage } from '../skin3d.js';
 import { currentAppearance } from '../appearance.js';
@@ -226,7 +226,8 @@ export function mount(root) {
 
   // ---- what's drawn ------------------------------------------------------------
   function render() {
-    balance.textContent = state && state.coins != null ? num(state.coins) : '—';
+    balance.textContent = state && state.coins != null ? shortCoins(state.coins) : '—';
+    balance.title = state && state.coins != null ? num(state.coins) : '';
     wallet.classList.toggle('offline', !!state && !state.online);
     const all = entries();
     if (!all.length) {
@@ -313,7 +314,7 @@ export function mount(root) {
   async function purchase(pack) {
     if (busy) return;
     if (state.coins != null && state.coins < pack.price) {
-      toast(t('shop.noFunds', { price: num(pack.price), coins: num(state.coins) }), { kind: 'warn', icon: 'coin', timeout: 8000, action: { label: t('shop.topUp'), onClick: topUp } });
+      toast(t('shop.noFunds', { price: num(pack.price), coins: shortCoins(state.coins) }), { kind: 'warn', icon: 'coin', timeout: 8000, action: { label: t('shop.topUp'), onClick: topUp } });
       return;
     }
     if (!(await confirmDialog(t('shop.confirmTitle'), t('shop.confirm', { name: named(pack), price: num(pack.price) }), { ok: t('shop.buy'), danger: false }))) return;
@@ -329,7 +330,7 @@ export function mount(root) {
     if (res) {
       state = res.state;
       if (res.ok) toast(t('shop.bought', { name: named(pack) }), { kind: 'ok', icon: 'sparkle', timeout: 8000 });
-      else if (res.error === 'funds') toast(t('shop.noFunds', { price: num(pack.price), coins: num(state.coins || 0) }), { kind: 'warn', icon: 'coin', timeout: 8000, action: { label: t('shop.topUp'), onClick: topUp } });
+      else if (res.error === 'funds') toast(t('shop.noFunds', { price: num(pack.price), coins: shortCoins(state.coins || 0) }), { kind: 'warn', icon: 'coin', timeout: 8000, action: { label: t('shop.topUp'), onClick: topUp } });
       else if (res.error === 'offline') toast(t('shop.offline'), { kind: 'error' });
       else toast(t('shop.failed'), { kind: 'error' });
     }

@@ -38,7 +38,8 @@ export function mount(root, params, { go }) {
   const stageTop = h('div.stage-top', stageName, h('div', { style: { flex: '1' } }));
   const stageLoading = h('div.stage-loading', spinner('lg'));
   const stageEl = h('div.stage', canvas, stageTop, stageLoading, h('div.stage-hint', t('skins.dragHint')));
-  const stage = new SkinStage(canvas, { width: 320, height: 420 });
+  // drawn every frame of the monitor: at 60 a second the walking figure stuttered on a 144/165 Hz screen
+  const stage = new SkinStage(canvas, { width: 320, height: 420, fps: 0 });
   life.add(() => stage.dispose());
 
   const ro = new ResizeObserver(() => {

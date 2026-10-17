@@ -1,7 +1,7 @@
 {
   "name": "mc-launcher",
   "productName": "MC Launcher",
-  "version": "2.1.22",
+  "version": "2.1.23",
   "description": "MC Launcher — Minecraft Java & Bedrock",
   "main": "src/main/index.js",
   "author": "MC Launcher",

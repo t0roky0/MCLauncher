@@ -100,7 +100,7 @@ function capFps(v, fps) {
     acc += t - last;
     last = t;
     if (v._disposed) return;
-    if (acc >= 1000 / fps - 4 || v.isUserRotating) {
+    if (!fps || acc >= 1000 / fps - 4 || v.isUserRotating) {
       acc = 0;
       draw();
     } else if (!v.renderPaused && !v._disposed) {
@@ -113,7 +113,8 @@ export class SkinStage {
   // hit: the element the mouse turns and zooms it from (else the canvas) —
   // the canvas then draws a larger picture round it, nothing cut at its
   // edges, and lets the mouse through to what's under it
-  constructor(canvas, { width = 320, height = 420, interactive = true, hit = null } = {}) {
+  // fps: how often at most it's drawn (0: every frame the monitor shows — the Skins page, where the figure is the point)
+  constructor(canvas, { width = 320, height = 420, interactive = true, hit = null, fps = 60 } = {}) {
     this.viewer = new skinview3d.SkinViewer({
       canvas,
       width,
@@ -134,7 +135,7 @@ export class SkinStage {
     v.autoRotateSpeed = 0.9;
     v.playerWrapper.rotation.y = -0.42;
     frameFigure(v, 3.5, 1.5);
-    capFps(v, 60);
+    capFps(v, fps);
     this.setAnimation('idle');
     this.skinUrl = '';
     this.capeUrl = '';

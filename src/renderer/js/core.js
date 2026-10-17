@@ -380,3 +380,12 @@ export function setSheen(enabled) {
     sheenAnims.clear();
   }
 }
+
+// Coins at a glance: as they are under 1000, then 1.2k, 25k, 1.5m (the full number in a tip)
+export function shortCoins(n) {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  const cut = (x, unit) => `${x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10}${unit}`;
+  if (v < 1000) return String(v);
+  if (v < 1e6) return cut(v / 1e3, 'k');
+  return cut(v / 1e6, 'm');
+}

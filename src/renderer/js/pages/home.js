@@ -189,7 +189,8 @@ export function mount(root, params, { go }) {
   // …and the week's quests (quests-ui.js)
   const quests = questsPromo();
   life.add(quests.dispose);
-  const rightTools = h('div.lobby-right-tools', heroInfo, sideRight, promo.el, quests.el, shopAd.el);
+  // the event, the shop's ad under it, the week's quests at the bottom (the event gone: they move up)
+  const rightTools = h('div.lobby-right-tools', heroInfo, sideRight, promo.el, shopAd.el, quests.el);
   let dock = null;
   function toggleChat(force) {
     const open = typeof force === 'boolean' ? force : !dock;
@@ -390,9 +391,15 @@ export function mount(root, params, { go }) {
   // The corner's cards above the launch bar: when the event, the quests and the
   // shop's ad don't all fit, the ad goes (the shop has its own tab)
   function fitCorner() {
-    shopAd.el.classList.remove('squeezed');
+    const steps = [() => shopAd.el.classList.add('compact'), () => shopAd.el.classList.add('squeezed'), () => promo.el.classList.add('compact')];
+    shopAd.el.classList.remove('compact', 'squeezed');
+    promo.el.classList.remove('compact');
     if (rightTools.hidden || !launchbar.offsetHeight) return;
-    if (rightTools.getBoundingClientRect().bottom > launchbar.getBoundingClientRect().top - 10) shopAd.el.classList.add('squeezed');
+    const over = () => rightTools.getBoundingClientRect().bottom > launchbar.getBoundingClientRect().top - 10;
+    for (const step of steps) {
+      if (!over()) return;
+      step();
+    }
   }
   const cornerRo = new ResizeObserver(fitCorner);
   cornerRo.observe(rightTools);

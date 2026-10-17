@@ -88,7 +88,9 @@ async function redeem(text) {
     if (Array.isArray(res.receipts)) cosmetics.setReceipts(res.receipts, res.again ? [] : res.items || []);
     const items = cosmetics.grantSet({ event: res.event, items: res.items, reward: res.reward });
     log.info(`Codes: ${res.reward}${res.again ? ' (again)' : ''}, ${items.length} item(s).`);
-    return { ok: true, reward: res.reward, title: res.title || null, items };
+    // a code for coins: on the balance now
+    if (Number.isFinite(res.coins)) require('./shop').setCoins(res.coins);
+    return { ok: true, reward: res.reward, title: res.title || null, items, added: Number.isFinite(res.added) ? res.added : 0 };
   }
   return { ok: false, error: 'offline' };
 }

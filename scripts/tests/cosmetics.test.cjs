@@ -119,7 +119,7 @@ test('every item has a rarity and a class (head, back or a pet)', () => {
   c.init();
   const items = c.view().items;
   assert.equal(items.filter((i) => !i.shop).length, 5); // the event's
-  assert.equal(items.filter((i) => i.shop).map((i) => i.id).sort().join(), 'angel_wings,balaboom,capybara,devil_horns,devil_wings,fallen_wings,halo,horned_halo,santa_hat,warden'); // the shop's
+  assert.equal(items.filter((i) => i.shop).map((i) => i.id).sort().join(), 'angel_wings,balaboom,capybara,devil_horns,devil_wings,enderman,fallen_wings,halo,horned_halo,santa_hat,warden'); // the shop's
   for (const it of items) {
     assert.ok(['common', 'rare', 'epic', 'legendary'].includes(it.rarity), it.id);
     assert.ok(['head', 'back', 'pet'].includes(it.slot), it.id);

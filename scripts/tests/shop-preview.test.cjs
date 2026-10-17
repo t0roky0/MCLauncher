@@ -33,7 +33,7 @@ test('shop showcase: dragging stops auto rotation, refresh preserves the canvas,
     swap: (node, ...els) => { node.children = els.flat().filter(x => x && x.tag); node.swaps++; },
     bag: () => { const callbacks = []; return { add: f => callbacks.push(f), dispose: () => callbacks.forEach(f => f()) }; },
     icon: () => h('svg'), button: () => h('button'), spinner: () => h('span'),
-    onEvent: () => () => {}, store: { get: () => ({}) }, currentAppearance: () => Promise.resolve({url:'skin',model:'classic'}),
+    onEvent: () => () => {}, shortCoins: (n) => String(n), store: { get: () => ({}) }, currentAppearance: () => Promise.resolve({url:'skin',model:'classic'}),
     api: () => new Promise(resolve => requests.push(resolve)),
     ResizeObserver: class { constructor(f) { this.callback = f; observers.push(this); } observe() {} disconnect() { this.disconnected = true; } },
   };

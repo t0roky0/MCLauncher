@@ -323,7 +323,10 @@ export function mount(root, params, { go }) {
       if (r.ok) {
         const title = r.title ? (ru ? r.title.ru : r.title.en) : ru ? 'Награда' : 'Reward';
         const names = r.items.map((it) => (ru ? it.name : it.nameEn)).join(', ');
-        swap(codeResult, h('div.code-ok', icon('check'), h('div', h('b', `${ru ? 'Активировано' : 'Activated'}: ${title}`), names ? h('div.hint', names) : null)),
+        // coins: on the balance (the shop), nothing to put on
+        if (r.added) swap(codeResult, h('div.code-ok', icon('check'), h('div', h('b', `${ru ? 'Активировано' : 'Activated'}: +${r.added} ${ru ? 'монет' : 'coins'}`), h('div.hint', ru ? 'Монеты уже на счёте — их видно в «Магазине».' : 'The coins are on your balance — see the Shop.'))),
+          button(ru ? 'Открыть «Магазин»' : 'Open the Shop', { icon: 'shop', cls: 'btn-sm', onClick: () => go('shop') }));
+        else swap(codeResult, h('div.code-ok', icon('check'), h('div', h('b', `${ru ? 'Активировано' : 'Activated'}: ${title}`), names ? h('div.hint', names) : null)),
           button(ru ? 'Открыть в «Скинах»' : 'Open in Skins', { icon: 'hanger', cls: 'btn-sm', onClick: () => go('skins') }));
         codeInput.value = '';
         toast(`${ru ? 'Активировано' : 'Activated'}: ${title}`, { kind: 'ok' });
