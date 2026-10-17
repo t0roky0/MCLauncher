@@ -28,7 +28,7 @@ function load(answer, account = null) {
   }
   const deps = {
     './mqtt': { MqttClient },
-    './relay-server': { MQTT_URLS: ['mqtts://relay:443', 'mqtts://relay:8883', 'mqtt://relay:1883'] },
+    './relay-server': { MQTT_URLS: ['mqtts://relay:443', 'mqtts://relay:8883', 'mqtt://relay:1883'], SECURE_URLS: ['mqtts://relay:443', 'mqtts://relay:8883'] },
     './cosmetics': { deviceKey: () => 'd'.repeat(64), grantSet: (r) => { granted.push(r); return [{ id: 'witch_hat', name: 'Шляпа ведьмы', nameEn: 'Witch hat' }]; } },
     './log': { info() {}, warn() {} },
     // the account signed in: none (the launcher's own key), or one with its session

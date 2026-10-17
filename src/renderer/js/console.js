@@ -97,16 +97,19 @@ async function boot() {
     levelBtn('info', 'INFO'),
     levelBtn('warn', 'WARN'),
     levelBtn('error', 'ERROR'),
-    h('div.grow'),
-    h('label.auto', auto, t('console.autoscroll')),
-    killBtn,
-    button(null, { icon: 'copy', cls: 'btn-sm btn-icon', title: t('console.copy'), onClick: copyVisible }),
-    button(null, { icon: 'folder', cls: 'btn-sm btn-icon', title: t('console.logs'), onClick: () => api('app:openFolder', 'logs') }),
-    button(null, { icon: 'trash', cls: 'btn-sm btn-icon', title: t('console.clear'), onClick: async () => {
-      await api('log:clear');
-      lines = [];
-      renderAll();
-    } }),
+    // to the right, and onto the next row together when the window's narrow
+    h(
+      'div.tb-right',
+      h('label.auto', auto, t('console.autoscroll')),
+      killBtn,
+      button(null, { icon: 'copy', cls: 'btn-sm btn-icon', title: t('console.copy'), onClick: copyVisible }),
+      button(null, { icon: 'folder', cls: 'btn-sm btn-icon', title: t('console.logs'), onClick: () => api('app:openFolder', 'logs') }),
+      button(null, { icon: 'trash', cls: 'btn-sm btn-icon', title: t('console.clear'), onClick: async () => {
+        await api('log:clear');
+        lines = [];
+        renderAll();
+      } }),
+    ),
   );
   logEl = h('div.log');
   logEl.addEventListener('scroll', () => {

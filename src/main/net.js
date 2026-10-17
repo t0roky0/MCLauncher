@@ -3,7 +3,7 @@
 //
 // Node's own fetch (undici) with keep-alive, so the few thousand asset
 // requests of a fresh install reuse a handful of connections instead of
-// opening one each. Every download is hashed while it streams to a .part
+// opening one each (Chromium's when a system proxy is on: fetchVia). Every download is hashed while it streams to a .part
 // file and only renamed into place once size and SHA-1 both match — a file
 // that is on disk under its real name is a file that was verified.
 
@@ -14,6 +14,15 @@ const crypto = require('crypto');
 const { app } = require('electron');
 
 const userAgent = () => `MCLauncher/${app.getVersion()} (Windows; Electron)`;
+
+// Through the system proxy when there is one for the address (a VPN app's
+// "system proxy" mode): Chromium's own fetch, which goes the way the
+// window's requests go; else Node's (undici), straight, with keep-alive.
+async function fetchVia(url, init) {
+  const via = await require('./proxy').forUrl(url).catch(() => null);
+  // no-store: as undici, never an answer kept from before (a profile just changed)
+  return via ? require('electron').net.fetch(url, { cache: 'no-store', ...init }) : fetch(url, init);
+}
 
 class HttpError extends Error {
   constructor(status, body, url) {
@@ -85,7 +94,7 @@ async function request(url, opts = {}) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const link = linkSignals(signal, timeout);
     try {
-      const res = await fetch(url, {
+      const res = await fetchVia(url, {
         method,
         headers: { 'User-Agent': userAgent(), ...headers },
         body,
@@ -170,7 +179,7 @@ async function download(url, dest, { sha1, size, signal, onBytes, retries = 4, i
     let written = 0;
     const link = linkSignals(signal, idleTimeout);
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': userAgent() }, signal: link.signal, redirect: 'follow' });
+      const res = await fetchVia(url, { headers: { 'User-Agent': userAgent() }, signal: link.signal, redirect: 'follow' });
       if (!res.ok) throw new HttpError(res.status, '', url);
       const hash = sha1 ? crypto.createHash('sha1') : null;
       const fh = await fsp.open(tmp, 'w');

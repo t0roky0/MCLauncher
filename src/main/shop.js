@@ -54,7 +54,7 @@ async function call(body) {
     if (!s) return null;
     session = s.session;
   }
-  for (const url of relay.MQTT_URLS) {
+  for (const url of relay.SECURE_URLS) {
     try {
       return await ask(url, { ...body, device: cosmetics.deviceKey(), ...(session ? { session } : {}) });
     } catch (e) {
@@ -110,8 +110,19 @@ async function pay(productId) {
     log.info(`Shop: payment for ${productId} refused (${res.error}).`);
     return { ok: false, error: String(res.error || 'provider') };
   }
+  // only a payment page on the web (YooKassa's): nothing else is opened, whatever came back
+  let page;
+  try {
+    page = new URL(String(res.url || ''));
+  } catch {
+    page = null;
+  }
+  if (!page || page.protocol !== 'https:' || !/(^|\.)(yookassa\.ru|yoomoney\.ru)$/i.test(page.hostname)) {
+    log.warn('Shop: the payment page is not on YooKassa — not opened.');
+    return { ok: false, error: 'provider' };
+  }
   log.info(`Shop: payment ${res.payment} for ${productId} — its page opened.`);
-  await shell.openExternal(res.url);
+  await shell.openExternal(page.href);
   watchPayment(res.payment, productId);
   return { ok: true };
 }

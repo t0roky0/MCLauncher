@@ -176,7 +176,7 @@ async function send() {
 
 async function ask(body) {
   const { ask: one } = require('./redeem');
-  for (const url of relay.MQTT_URLS) {
+  for (const url of relay.SECURE_URLS) {
     try {
       return await one(url, body, 12000);
     } catch (e) {

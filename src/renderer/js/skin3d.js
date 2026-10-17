@@ -201,13 +201,17 @@ export class SkinStage {
     const o = this.showcased;
     if (!o) return;
     const v = this.viewer;
-    v.playerObject.updateMatrixWorld(true);
+    // the whole scene: before its first frame the player's wrapper (lowered,
+    // turned) isn't in its children's places yet — the pet measured where it
+    // isn't, the camera then going round a point beside it
+    v.scene.updateMatrixWorld(true);
     const box = new Box3().setFromObject(o);
     const centre = box.getCenter(new Vector3());
-    const size = box.getSize(new Vector3()).length();
+    // its float up and down (model.float.bob) is in the room it's given
+    const size = box.getSize(new Vector3()).length() + 2.5;
     // fitAspect: the shape it's to fit in (the shop: its column; the canvas may be wider)
     const fit = Math.min(1, this.fitAspect || v.camera.aspect || 1);
-    const dist = (((size / 2) / Math.tan((v.camera.fov * Math.PI) / 360)) * 1.25) / fit;
+    const dist = (((size / 2) / Math.tan((v.camera.fov * Math.PI) / 360)) * 1.3) / fit;
     const a = -0.55;
     v.controls.target.copy(centre);
     v.camera.position.copy(centre).add(new Vector3(Math.sin(a), 0.32, Math.cos(a)).normalize().multiplyScalar(dist));

@@ -1,6 +1,7 @@
 // ICE servers for voice and the world tunnel: our relay's STUN and TURN (its
-// credentials come from the main process, valid a day, fetched again every
-// hour) and public STUN. TURN carries the calls two players can't make
+// credentials come from the main process — our server makes them, valid a few
+// hours — fetched again every hour, in a few minutes while there's no TURN)
+// and public STUN. TURN carries the calls two players can't make
 // straight to each other — mobile internet, a phone's hotspot, a provider's
 // shared address.
 import { api } from './core.js';
@@ -16,7 +17,8 @@ export function refreshIce() {
     pending = api('net:ice')
       .then((own) => {
         if (Array.isArray(own) && own.length) servers = [...own, ...PUBLIC];
-        fetchedAt = Date.now();
+        // without TURN (our server didn't answer): again in five minutes
+        fetchedAt = Date.now() - (Array.isArray(own) && own.some((s) => s.username) ? 0 : 3300e3);
         return servers;
       })
       .catch(() => servers)

@@ -1,11 +1,15 @@
 @import './app.css';
 
 body { background: #100f0f; }
-#console { height: 100vh; display: grid; grid-template-rows: 34px auto 1fr 24px; }
-.titlebar { background: #141313; border-bottom: 1px solid var(--line); }
-.toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #161514; border-bottom: 2px solid var(--line); }
-.toolbar .grow { flex: 1; }
-.filter { position: relative; width: 260px; }
+/* one column as wide as the window: the toolbar's buttons never make the
+   page wider than it (that cut off the window's own buttons and the log's
+   line ends in a narrow console); in a narrow one the toolbar takes two rows */
+#console { height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 34px auto minmax(0, 1fr) 24px; }
+.titlebar { background: #141313; border-bottom: 1px solid var(--line); min-width: 0; }
+.titlebar .tb-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: #161514; border-bottom: 2px solid var(--line); min-width: 0; }
+.tb-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.filter { position: relative; flex: 1 1 150px; min-width: 140px; max-width: 260px; }
 .filter .px-icon { position: absolute; left: 10px; top: 50%; margin-top: -9px; color: var(--faint); }
 .filter .input { height: 30px; padding-left: 36px; font-size: 12px; }
 .lv {

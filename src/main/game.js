@@ -137,6 +137,11 @@ function buildCommand(entry, spec, session, opts) {
   // …and a hand-made version JSON with a bare "--demo" doesn't sneak it in
   const demo = game.indexOf('--demo');
   if (demo >= 0) game.splice(demo, 1);
+  // the system proxy (proxy.js): Mojang's services, skins, a server's pack, Realms through it
+  const px = opts.proxy;
+  if (px && game.includes('--accessToken') && !game.includes('--proxyHost')) {
+    game.push('--proxyHost', px.host, '--proxyPort', String(px.port), '--proxyUser', px.user, '--proxyPass', px.pass);
+  }
 
   return [...jvm, ...versionJvm, spec.mainClass, ...game];
 }
@@ -182,7 +187,11 @@ async function launch(entry, spec, session, opts = {}) {
   log.secret(session.accessToken);
   const mappings = await require('./party-mappings').forEntry(entry);
   const skins = await gameSkins.prepare({ accountId: session.accountId, identity: { uuid: session.uuid, name: session.name }, self: session.skin || null, assetsRoot: spec.assetsRoot, offline: !!session.offline, lan: !!opts.partyHost, installId: entry.id, mappings, partyBridge: true });
-  const args = buildCommand(entry, spec, session, { ...opts, extraJvm: skins ? skins.jvmArgs : [] });
+  const proxy = await require('./proxy').forGame().catch((e) => {
+    log.warn(`Game proxy: ${e.message}`);
+    return null;
+  });
+  const args = buildCommand(entry, spec, session, { ...opts, proxy, extraJvm: skins ? skins.jvmArgs : [] });
   log.info(`Java ${spec.javaVersion || spec.javaMajor}: ${spec.javaExe}`);
   log.info(`Command: ${redact(args, session.accessToken).join(' ')}`);
   const finalArgs = await maybeArgFile(args, spec);

@@ -72,7 +72,7 @@ async function redeem(text) {
     session = s.session;
   }
   const body = { code, device: cosmetics.deviceKey(), v: VERSION, ...(session ? { session } : {}) };
-  for (const url of relay.MQTT_URLS) {
+  for (const url of relay.SECURE_URLS) {
     let res;
     try {
       res = await ask(url, body);

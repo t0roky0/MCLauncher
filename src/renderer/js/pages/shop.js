@@ -119,6 +119,8 @@ export function mount(root) {
     stage.viewer.controls.addEventListener('end', giveBack);
     stage.viewer.controls.enableDamping = true;
     stage.viewer.controls.dampingFactor = 0.1;
+    // the wheel scrolls the shop (over the showcase it brought a pet so close it filled the block)
+    stage.viewer.controls.enableZoom = false;
     stage.setAnimation('idle');
     // the column's shape: the figure as big as it fits there (the picture round it only adds room)
     const columnAspect = () => {

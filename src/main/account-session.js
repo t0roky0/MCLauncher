@@ -9,7 +9,7 @@
 const relay = require('./relay-server');
 const log = require('./log');
 
-const SECURE = relay.MQTT_URLS.filter((u) => u.startsWith('mqtts://'));
+const SECURE = relay.SECURE_URLS;
 const sessions = new Map(); // account id → { key: "x:<xuid>", session, gamertag }
 const pending = new Map(); // account id → the login under way
 
